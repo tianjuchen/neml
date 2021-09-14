@@ -47,3 +47,10 @@ dist
 neml.egg-info
 util/string_interface/cxxstring
 *.exe
+*.suo
+*.VC.*
+ProjectSettings.json
+slnx.sqlite
+VSWorkSpaceState.json
+*.ipch
+.vs/*

@@ -1,6 +1,8 @@
 #ifndef ROTATIONS_H
 #define ROTATIONS_H
 
+#define _USE_MATH_DEFINES
+
 #include "tensors.h"
 #include "nemlmath.h"
 

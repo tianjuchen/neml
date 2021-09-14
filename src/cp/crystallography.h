@@ -1,6 +1,8 @@
 #ifndef CRYSTALLOGRAPHY_H
 #define CRYSTALLOGRAPHY_H
 
+#define _USE_MATH_DEFINES
+
 #include "../objects.h"
 
 #include "../math/rotations.h"
