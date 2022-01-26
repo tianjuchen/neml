@@ -28,7 +28,7 @@ class CommonSlipHardening():
     
     nd = nd.reshape(d.shape)
 
-    self.assertTrue(np.allclose(nd.reshape(d.shape), d, rtol = 1.0e-4))
+    self.assertTrue(np.allclose(nd.reshape(d.shape), d)) #, rtol = 1.0e-4))
 
   def test_d_hist_to_tau_d_hist(self):
     for g in range(self.L.ngroup):
@@ -383,7 +383,7 @@ class TestLANLTiModel(unittest.TestCase, CommonSlipHardening):
     self.current_slip = 0.1
     
     self.rhos = np.array([
-      2,3,2,2,3,2,2,1,4,5,1,2.0])*1e-6
+      2,3,2,2,3,2,2,4,4,5,6,2.0])*1e-6
 
     self.H = history.History()
 
@@ -395,7 +395,7 @@ class TestLANLTiModel(unittest.TestCase, CommonSlipHardening):
       self.H.add_scalar("slip"+str(i))
       self.H.set_scalar("slip"+str(i), self.current_slip)
 
-    self.T = 300.0
+    self.T = 900.0
     
     self.G_np = ra.random((12,12)) * 10
 
