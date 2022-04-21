@@ -23,7 +23,7 @@ size_t PolycrystalModel::nhist() const
   return (model_->nstore() + 6 + 6 + 3) * n();
 }
 
-int PolycrystalModel::init_hist(double * const hist) const
+void PolycrystalModel::init_hist(double * const hist) const
 {
   for (size_t i = 0; i < n(); i++) {
     model_->init_store(history(hist, i));
@@ -33,8 +33,6 @@ int PolycrystalModel::init_hist(double * const hist) const
     std::fill(d(hist, i), d(hist, i) + 6, 0);
     std::fill(w(hist, i), w(hist, i) + 3, 0);
   }
-
-  return 0;
 }
 
 double * PolycrystalModel::history(double * const store, size_t i) const 
@@ -118,12 +116,12 @@ size_t TaylorModel::nstore() const
   return nhist();
 }
 
-int TaylorModel::init_store(double * const store) const
+void TaylorModel::init_store(double * const store) const
 {
-  return init_hist(store);
+  init_hist(store);
 }
 
-int TaylorModel::update_ld_inc(
+void TaylorModel::update_ld_inc(
    const double * const d_np1, const double * const d_n,
    const double * const w_np1, const double * const w_n,
    double T_np1, double T_n,
@@ -158,7 +156,7 @@ int TaylorModel::update_ld_inc(
     std::copy(w_np1, w_np1+3, w(h_np1, i));
   }
 
-  int ier = evaluate_crystal_batch(*model_, n(), 
+  evaluate_crystal_batch(*model_, n(), 
                          d(h_np1, 0), d(h_n, 0),
                          w(h_np1, 0), w(h_n, 0),
                          Ts_np1, Ts_n,
@@ -195,8 +193,6 @@ int TaylorModel::update_ld_inc(
 
   u_np1 += u_n;
   p_np1 += p_n;
-
-  return ier;
 }
 
 double TaylorModel::alpha(double T) const
@@ -204,7 +200,7 @@ double TaylorModel::alpha(double T) const
   return model_->alpha(T);
 }
 
-int TaylorModel::elastic_strains(const double * const s_np1, 
+void TaylorModel::elastic_strains(const double * const s_np1, 
                                  double T_np1, const double * const h_np1, 
                                  double * const e_np1) const
 {
@@ -218,8 +214,6 @@ int TaylorModel::elastic_strains(const double * const s_np1,
   }
 
   for (size_t j = 0; j < n(); j++) e_np1[j] /= n();
-
-  return 0;
 }
 
 }

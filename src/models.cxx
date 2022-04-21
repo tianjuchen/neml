@@ -35,7 +35,7 @@ NEMLModel_sd::NEMLModel_sd(ParameterSet & params) :
 
 }
 
-int NEMLModel_sd::update_ld_inc(
+void NEMLModel_sd::update_ld_inc(
     const double * const d_np1, const double * const d_n,
     const double * const w_np1, const double * const w_n,
     double T_np1, double T_n,
@@ -46,7 +46,6 @@ int NEMLModel_sd::update_ld_inc(
     double & u_np1, double u_n,
     double & p_np1, double p_n)
 {
-  int ier;
   double base_A_np1[36];
   
   double D[6];
@@ -61,9 +60,8 @@ int NEMLModel_sd::update_ld_inc(
     std::fill(D, D+6, 0.0);
   }
   
-  ier =  update_sd(d_np1, d_n, T_np1, T_n, t_np1, t_n, &h_np1[nhist()], &h_n[nhist()],
+  update_sd(d_np1, d_n, T_np1, T_n, t_np1, t_n, &h_np1[nhist()], &h_n[nhist()],
                    &h_np1[0], &h_n[0], base_A_np1, u_np1, u_n, p_np1, p_n);
-  if (ier != 0) return ier;
 
   sub_vec(&h_np1[nhist()], &h_n[nhist()], 6, dS);  
  
@@ -71,7 +69,6 @@ int NEMLModel_sd::update_ld_inc(
 
   calc_tangent_(D, W, base_A_np1, s_np1, A_np1, B_np1);
 
-  return ier;
 }
 
 size_t NEMLModel_sd::nstore() const
@@ -79,12 +76,10 @@ size_t NEMLModel_sd::nstore() const
   return nhist() + 6;
 }
 
-int NEMLModel_sd::init_store(double * const store) const
+void NEMLModel_sd::init_store(double * const store) const
 {
   init_hist(&store[0]);
   std::fill(&store[nhist()], &store[nhist()]+6, 0.0);
-
-  return 0;
 }
 
 double NEMLModel_sd::alpha(double T) const
@@ -97,36 +92,31 @@ const std::shared_ptr<const LinearElasticModel> NEMLModel_sd::elastic() const
   return elastic_;
 }
 
-int NEMLModel_sd::elastic_strains(const double * const s_np1,
+void NEMLModel_sd::elastic_strains(const double * const s_np1,
                                            double T_np1, 
                                            const double * const h_np1,
                                            double * const e_np1) const
 {
   double S[36];
-  int ier = elastic_->S(T_np1, S);
-  if (ier != SUCCESS) {
-    return ier;
-  }
-  return mat_vec(S, 6, s_np1, 6, e_np1);
+  elastic_->S(T_np1, S);
+  mat_vec(S, 6, s_np1, 6, e_np1);
+
 }
 
-int NEMLModel_sd::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
+void NEMLModel_sd::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
 {
   elastic_ = emodel;
-  return 0;
 }
 
-int NEMLModel_sd::calc_tangent_(const double * const D, const double * const W,
+void NEMLModel_sd::calc_tangent_(const double * const D, const double * const W,
                                 const double * const C, const double * const S,
                                 double * const A, double * const B)
 {
-  int ier;
   double J[81];
   double O[81];
 
   truesdell_mat(D, W, J);
-  ier = invert_mat(J, 9);
-  if (ier != 0) return ier;
+  invert_mat(J, 9);
 
   truesdell_tangent_outer(S, O);
 
@@ -153,7 +143,6 @@ int NEMLModel_sd::calc_tangent_(const double * const D, const double * const W,
   // IMPORTANT TODO: go back and find where you dropped the factor of 2...
   for (int i=0; i<18; i++) B[i] *= 2.0;
 
-  return 0;
 }
 
 // NEMLModel_ldi implementation
@@ -163,7 +152,7 @@ NEMLModel_ldi::NEMLModel_ldi(ParameterSet & params) :
 
 }
 
-int NEMLModel_ldi::update_sd(
+void NEMLModel_ldi::update_sd(
    const double * const e_np1, const double * const e_n,
    double T_np1, double T_n,
    double t_np1, double t_n,
@@ -175,7 +164,7 @@ int NEMLModel_ldi::update_sd(
 {
   double W[3] = {0,0,0};
   double B[18];
-  return update_ld_inc(e_np1, e_n, W, W, T_np1, T_n, t_np1, t_n,
+  update_ld_inc(e_np1, e_n, W, W, T_np1, T_n, t_np1, t_n,
                        s_np1, s_n, h_np1, h_n, A_np1, B, u_np1, u_n,
                        p_np1, p_n);
 }
@@ -185,10 +174,9 @@ size_t NEMLModel_ldi::nstore() const
   return nhist();
 }
 
-int NEMLModel_ldi::init_store(double * const store) const
+void NEMLModel_ldi::init_store(double * const store) const
 {
   init_hist(&store[0]);
-  return 0;
 }
 
 SubstepModel_sd::SubstepModel_sd(ParameterSet & params) :
@@ -204,7 +192,7 @@ SubstepModel_sd::SubstepModel_sd(ParameterSet & params) :
 
 }
 
-int SubstepModel_sd::update_sd(
+void SubstepModel_sd::update_sd(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
     double t_np1, double t_n,
@@ -259,10 +247,21 @@ int SubstepModel_sd::update_sd(
     T_next = T_n + sm * T_diff;
     t_next = t_n + sm * t_diff;
     
-    // Try updating
-    int ier = update_step(
-        e_next, e_past, T_next, T_past, t_next, t_past, s_np1, s_past,
-        h_np1, h_past, A_inc, E_inc, u_np1, u_past, p_np1, p_past);
+    try {
+      // Try updating
+      update_step(
+          e_next, e_past, T_next, T_past, t_next, t_past, s_np1, s_past,
+          h_np1, h_past, A_inc, E_inc, u_np1, u_past, p_np1, p_past);
+    }
+    // Failed adapt
+    catch (const NEMLError & e) {
+      nd += 1;
+      if (nd >= max_divide_) {
+        throw NonlinearSolverError("Exceeded maximum adaptive subdivisions");
+      }
+      cm /= 2;
+      continue;
+    }
    
     // For testing we can force subdivision
     if (force_divide_ && (nd < max_divide_)) {
@@ -271,14 +270,6 @@ int SubstepModel_sd::update_sd(
       continue;
     }
 
-    // Failed: adapt timestep
-    if (ier != SUCCESS) {
-      nd += 1;
-      if (nd >= max_divide_) return ier;  // Failed entirely
-      cm /= 2;
-      continue;
-    }
-    
     // Tangent
     for (size_t i = 0; i < nparams()*6; i++) {
       A_old[i] += E_inc[i] * sf;
@@ -311,10 +302,9 @@ int SubstepModel_sd::update_sd(
   delete [] A_new;
   delete [] E_inc;
 
-  return 0;
 }
 
-int SubstepModel_sd::update_step(
+void SubstepModel_sd::update_step(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
     double t_np1, double t_n,
@@ -354,55 +344,39 @@ int SubstepModel_sd::update_step(
     work_and_energy(ts, e_np1, e_n, T_np1, T_n, t_np1, t_n, s_np1, s_n,
                     h_np1, h_n, u_np1, u_n, p_np1, p_n); 
     delete ts;
-    return 0;
+
+    return;
   }
   
   // Solve the system
   double * x = new double [nparams()]; 
-  int ier = solve(this, x, ts, {rtol_, atol_, miter_, verbose_, linesearch_},
-                  nullptr, A); // Keep jacobian
-  if (ier != SUCCESS) {
+  try {
+    solve(this, x, ts, {rtol_, atol_, miter_, verbose_, linesearch_},
+                    nullptr, A); // Keep jacobian
+
+    // Invert the Jacobian (or idk, could go in the tangent calc)
+    invert_mat(A, nparams());
+
+    // Interpret the x vector as the updated state
+    update_internal(x, e_np1, e_n, T_np1, T_n, t_np1, t_n,
+                          s_np1, s_n, h_np1, h_n);
+
+    // Get the dE matrix
+    strain_partial(ts, e_np1, e_n, T_np1, T_n, t_np1, t_n, s_np1, s_n, h_np1, h_n, E);
+
+    // Update the work and energy
+    work_and_energy(ts, e_np1, e_n, T_np1, T_n, t_np1, t_n, 
+                          s_np1, s_n, h_np1, h_n, u_np1, u_n,
+                          p_np1, p_n);
+  }
+  catch (const NEMLError & e) {
     delete [] x;
     delete ts;
-    return ier;
+    throw e;
   }
 
-  // Invert the Jacobian (or idk, could go in the tangent calc)
-  ier = invert_mat(A, nparams());
-  if (ier != SUCCESS) {
-    delete [] x;
-    delete ts;
-    return ier;
-  }
-
-  // Interpret the x vector as the updated state
-  ier = update_internal(x, e_np1, e_n, T_np1, T_n, t_np1, t_n,
-                        s_np1, s_n, h_np1, h_n);
-
-  if (ier != SUCCESS) {
-    delete [] x;
-    delete ts;
-    return ier;
-  }
-
-  // Get the dE matrix
-  ier = strain_partial(ts, e_np1, e_n, T_np1, T_n, t_np1, t_n, s_np1, s_n, h_np1, h_n, E);
-
-  if (ier != SUCCESS) {
-    delete [] x;
-    delete ts;
-    return ier;
-  }
-
-  // Update the work and energy
-  ier = work_and_energy(ts, e_np1, e_n, T_np1, T_n, t_np1, t_n, 
-                        s_np1, s_n, h_np1, h_n, u_np1, u_n,
-                        p_np1, p_n);
   delete [] x;
   delete ts;
-  if (ier != SUCCESS) return ier;
-
-  return ier;
 }
 
 // Implementation of small strain elasticity
@@ -440,12 +414,11 @@ size_t SmallStrainElasticity::nhist() const
   return 0;
 }
 
-int SmallStrainElasticity::init_hist(double * const hist) const
+void SmallStrainElasticity::init_hist(double * const hist) const
 {
-  return 0;
 }
 
-int SmallStrainElasticity::update_sd(
+void SmallStrainElasticity::update_sd(
        const double * const e_np1, const double * const e_n,
        double T_np1, double T_n,
        double t_np1, double t_n,
@@ -455,8 +428,7 @@ int SmallStrainElasticity::update_sd(
        double & u_np1, double u_n,
        double & p_np1, double p_n)
 {
-  int ier = elastic_->C(T_np1, A_np1);
-  if (ier != SUCCESS) return ier;
+  elastic_->C(T_np1, A_np1);
   mat_vec(A_np1, 6, e_np1, 6, s_np1);
 
   // Energy calculation (trapezoid rule)
@@ -468,7 +440,6 @@ int SmallStrainElasticity::update_sd(
   u_np1 = u_n + dot_vec(ds, de, 6);
   p_np1 = p_n;
 
-  return 0;
 }
 
 // Implementation of perfect plasticity
@@ -518,9 +489,8 @@ size_t SmallStrainPerfectPlasticity::nhist() const
   return 0;
 }
 
-int SmallStrainPerfectPlasticity::init_hist(double * const hist) const
+void SmallStrainPerfectPlasticity::init_hist(double * const hist) const
 {
-  return 0;
 }
 
 TrialState * SmallStrainPerfectPlasticity::setup(
@@ -550,7 +520,7 @@ bool SmallStrainPerfectPlasticity::elastic_step(
   return fv <= 0.0;
 }
 
-int SmallStrainPerfectPlasticity::update_internal(
+void SmallStrainPerfectPlasticity::update_internal(
     const double * const x,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -559,10 +529,9 @@ int SmallStrainPerfectPlasticity::update_internal(
     double * const h_np1, const double * const h_n)
 {
   std::copy(x, x+6, s_np1);
-  return 0;
 }
 
-int SmallStrainPerfectPlasticity::strain_partial(
+void SmallStrainPerfectPlasticity::strain_partial(
     const TrialState * ts,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -580,10 +549,9 @@ int SmallStrainPerfectPlasticity::strain_partial(
     }
   }
 
-  return 0;
 }
 
-int SmallStrainPerfectPlasticity::work_and_energy(
+void SmallStrainPerfectPlasticity::work_and_energy(
     const TrialState * ts,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -614,7 +582,6 @@ int SmallStrainPerfectPlasticity::work_and_energy(
   sub_vec(e_np1, e_n, 6, de);
   u_np1 = u_n + dot_vec(ds, de, 6) / 2.0;
 
-  return 0;
 }
 
 size_t SmallStrainPerfectPlasticity::nparams() const
@@ -622,16 +589,14 @@ size_t SmallStrainPerfectPlasticity::nparams() const
   return 7;
 }
 
-int SmallStrainPerfectPlasticity::init_x(double * const x, TrialState * ts)
+void SmallStrainPerfectPlasticity::init_x(double * const x, TrialState * ts)
 {
   SSPPTrialState * tss = static_cast<SSPPTrialState *>(ts);
   std::copy(tss->s_tr, tss->s_tr+6, x);
   x[6] = 0.0;
-
-  return 0;
 }
 
-int SmallStrainPerfectPlasticity::RJ(
+void SmallStrainPerfectPlasticity::RJ(
     const double * const x, TrialState * ts, double * const R,
     double * const J)
 {
@@ -641,16 +606,13 @@ int SmallStrainPerfectPlasticity::RJ(
 
   // Common things
   double fv;
-  int ier = surface_->f(s_np1, &tss->ys, tss->T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s_np1, &tss->ys, tss->T, fv);
 
   double df[6];
-  ier = surface_->df_ds(s_np1, &tss->ys, tss->T, df);
-  if (ier != SUCCESS) return ier;
+  surface_->df_ds(s_np1, &tss->ys, tss->T, df);
 
   double ddf[36];
-  ier = surface_->df_dsds(s_np1, &tss->ys, tss->T, ddf);
-  if (ier != SUCCESS) return ier;
+  surface_->df_dsds(s_np1, &tss->ys, tss->T, ddf);
 
   // R1
   double T[6];
@@ -681,8 +643,6 @@ int SmallStrainPerfectPlasticity::RJ(
 
   // J22
   J[CINDEX(6,6,7)] = 0.0;
-
-  return 0;
 }
 
 // Getter
@@ -692,7 +652,7 @@ double SmallStrainPerfectPlasticity::ys(double T) const
 }
 
 // Make this public for ease of testing
-int SmallStrainPerfectPlasticity::make_trial_state(
+void SmallStrainPerfectPlasticity::make_trial_state(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n, double t_np1, double t_n,
     const double * const s_n, const double * const h_n,
@@ -703,12 +663,10 @@ int SmallStrainPerfectPlasticity::make_trial_state(
  
   std::copy(e_np1, e_np1+6, ts.e_np1);
 
-  int ier = elastic_->C(T_np1, ts.C);
-  if (ier != SUCCESS) return ier;
+  elastic_->C(T_np1, ts.C);
 
   double S_n[36];
-  ier = elastic_->S(T_n, S_n);
-  if (ier != SUCCESS) return ier;
+  elastic_->S(T_n, S_n);
   mat_vec(S_n, 6, s_n, 6, ts.ep_n);
   for (size_t i = 0; i < 6; i++) ts.ep_n[i] = e_n[i] - ts.ep_n[i];
 
@@ -717,7 +675,6 @@ int SmallStrainPerfectPlasticity::make_trial_state(
   mat_vec(ts.C, 6, de, 6, ts.s_tr);
   for (size_t i = 0; i < 6; i++) ts.s_tr[i] = s_n[i] + ts.s_tr[i];
 
-  return 0;
 }
 
 // Implementation of small strain rate independent plasticity
@@ -769,9 +726,9 @@ size_t SmallStrainRateIndependentPlasticity::nhist() const
   return flow_->nhist();
 }
 
-int SmallStrainRateIndependentPlasticity::init_hist(double * const hist) const
+void SmallStrainRateIndependentPlasticity::init_hist(double * const hist) const
 {
-  return flow_->init_hist(hist);
+  flow_->init_hist(hist);
 }
 
 TrialState * SmallStrainRateIndependentPlasticity::setup(
@@ -802,7 +759,7 @@ bool SmallStrainRateIndependentPlasticity::elastic_step(
   return fv <= 0.0;
 }
 
-int SmallStrainRateIndependentPlasticity::update_internal(
+void SmallStrainRateIndependentPlasticity::update_internal(
     const double * const x,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -812,10 +769,9 @@ int SmallStrainRateIndependentPlasticity::update_internal(
 {
   std::copy(x, x+6, s_np1);
   std::copy(x+6, x+6+nhist(), h_np1);
-  return 0;
 }
 
-int SmallStrainRateIndependentPlasticity::strain_partial(
+void SmallStrainRateIndependentPlasticity::strain_partial(
     const TrialState * ts,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -832,10 +788,9 @@ int SmallStrainRateIndependentPlasticity::strain_partial(
       de[CINDEX(i,j,6)] = tss->C[CINDEX(i,j,6)];
     }
   }
-  return 0;
 }
 
-int SmallStrainRateIndependentPlasticity::work_and_energy(
+void SmallStrainRateIndependentPlasticity::work_and_energy(
     const TrialState * ts,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -866,7 +821,6 @@ int SmallStrainRateIndependentPlasticity::work_and_energy(
   sub_vec(e_np1, e_n, 6, de);
   u_np1 = u_n + dot_vec(ds, de, 6) / 2.0;
 
-  return 0;
 }
 
 size_t SmallStrainRateIndependentPlasticity::nparams() const
@@ -875,16 +829,15 @@ size_t SmallStrainRateIndependentPlasticity::nparams() const
   return 6 + flow_->nhist() + 1;
 }
 
-int SmallStrainRateIndependentPlasticity::init_x(double * const x, TrialState * ts)
+void SmallStrainRateIndependentPlasticity::init_x(double * const x, TrialState * ts)
 {
   SSRIPTrialState * tss = static_cast<SSRIPTrialState *>(ts);
   std::copy(tss->s_tr, tss->s_tr+6, x);
   std::copy(&tss->h_tr[0], &tss->h_tr[0]+flow_->nhist(), &x[6]);
   x[6+flow_->nhist()] = 0.0; // consistency parameter
-  return 0;
 }
 
-int SmallStrainRateIndependentPlasticity::RJ(const double * const x, 
+void SmallStrainRateIndependentPlasticity::RJ(const double * const x, 
                                              TrialState * ts, 
                                              double * const R, double * const J)
 {
@@ -900,13 +853,12 @@ int SmallStrainRateIndependentPlasticity::RJ(const double * const x,
 
   // Residual calculation
   double g[6];
-  int ier = flow_->g(s_np1, alpha, tss->T, g); 
+  flow_->g(s_np1, alpha, tss->T, g); 
   std::vector<double> hv(nh);
   double * h = &hv[0];
-  ier = flow_->h(s_np1, alpha, tss->T, h);
+  flow_->h(s_np1, alpha, tss->T, h);
   double f;
-  ier = flow_->f(s_np1, alpha, tss->T, f);
-  if (ier != SUCCESS) return ier;
+  flow_->f(s_np1, alpha, tss->T, f);
 
   double R1[6];
   for (int i=0; i<6; i++) {
@@ -928,8 +880,7 @@ int SmallStrainRateIndependentPlasticity::RJ(const double * const x,
   // J11
   double gs[36];
   double J11[36];
-  ier = flow_->dg_ds(s_np1, alpha, tss->T, gs);
-  if (ier != SUCCESS) return ier;
+  flow_->dg_ds(s_np1, alpha, tss->T, gs);
   mat_mat(6, 6, 6, tss->C, gs, J11);
   for (int i=0; i<36; i++) J11[i] = J11[i] * dg;
   for (int i=0; i<6; i++) J11[CINDEX(i,i,6)] += 1.0;
@@ -945,8 +896,7 @@ int SmallStrainRateIndependentPlasticity::RJ(const double * const x,
   double * ga = &gav[0];
   std::vector<double> J12v(6*nh);
   double * J12 = &J12v[0];
-  ier = flow_->dg_da(s_np1, alpha, tss->T, ga);
-  if (ier != SUCCESS) return ier;
+  flow_->dg_da(s_np1, alpha, tss->T, ga);
   mat_mat(6, nh, 6, tss->C, ga, J12);
 
   for (int i=0; i<6*nh; i++) J12[i] *= dg;
@@ -977,8 +927,7 @@ int SmallStrainRateIndependentPlasticity::RJ(const double * const x,
   // J22
   std::vector<double> J22v(nh*nh);
   double * J22 = &J22v[0];
-  ier = flow_->dh_da(s_np1, alpha, tss->T, J22);
-  if (ier != SUCCESS) return ier;
+  flow_->dh_da(s_np1, alpha, tss->T, J22);
   for (int i=0; i<nh*nh; i++) J22[i] *= dg;
   for (int i=0; i<nh; i++) J22[CINDEX(i,i,nh)] -= 1.0;
   for (int i=0; i<nh; i++) {
@@ -994,8 +943,7 @@ int SmallStrainRateIndependentPlasticity::RJ(const double * const x,
 
   // J31
   double J31[6];
-  ier = flow_->df_ds(s_np1, alpha, tss->T, J31);
-  if (ier != SUCCESS) return ier;
+  flow_->df_ds(s_np1, alpha, tss->T, J31);
   for (int i=0; i<6; i++) {
     J[CINDEX((6+nh), i, n)] = J31[i];
   }
@@ -1003,16 +951,13 @@ int SmallStrainRateIndependentPlasticity::RJ(const double * const x,
   // J32
   std::vector<double> J32v(nh);
   double * J32 = &J32v[0];
-  ier = flow_->df_da(s_np1, alpha, tss->T, J32);
-  if (ier != SUCCESS) return ier;
+  flow_->df_da(s_np1, alpha, tss->T, J32);
   for (int i=0; i<nh; i++) {
     J[CINDEX((6+nh), (i+6), n)] = J32[i];
   }
 
   // J33
   J[CINDEX((6+nh), (6+nh), n)] = 0.0;
-  
-  return 0;
 }
 
 const std::shared_ptr<const LinearElasticModel> SmallStrainRateIndependentPlasticity::elastic() const
@@ -1020,7 +965,7 @@ const std::shared_ptr<const LinearElasticModel> SmallStrainRateIndependentPlasti
   return elastic_;
 }
 
-int SmallStrainRateIndependentPlasticity::make_trial_state(
+void SmallStrainRateIndependentPlasticity::make_trial_state(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n, double t_np1, double t_n,
     const double * const s_n, const double * const h_n,
@@ -1031,8 +976,7 @@ int SmallStrainRateIndependentPlasticity::make_trial_state(
   // ep_tr = ep_n
   double S_n[36];
   double ee_n[6];
-  int ier = elastic_->S(T_n, S_n);
-  if (ier != SUCCESS) return ier;
+  elastic_->S(T_n, S_n);
 
   mat_vec(S_n, 6, s_n, 6, ee_n);
   sub_vec(e_n, ee_n, 6, ts.ep_tr);
@@ -1042,13 +986,11 @@ int SmallStrainRateIndependentPlasticity::make_trial_state(
   // Calculate the trial stress
   double ee[6];
   sub_vec(e_np1, ts.ep_tr, 6, ee);
-  ier = elastic_->C(T_np1, ts.C);
-  if (ier != SUCCESS) return ier;
+  elastic_->C(T_np1, ts.C);
 
   mat_vec(ts.C, 6, ee, 6, ts.s_tr);
   // Store temp
   ts.T = T_np1;
-  return 0;
 }
 
 // Implement creep + plasticity
@@ -1107,13 +1049,13 @@ size_t SmallStrainCreepPlasticity::nhist() const
   return plastic_->nhist() + 6;
 }
 
-int SmallStrainCreepPlasticity::init_hist(double * const hist) const
+void SmallStrainCreepPlasticity::init_hist(double * const hist) const
 {
   std::fill(hist, hist+6, 0.0);
-  return plastic_->init_hist(&hist[6]);
+  plastic_->init_hist(&hist[6]);
 }
 
-int SmallStrainCreepPlasticity::update_sd(
+void SmallStrainCreepPlasticity::update_sd(
        const double * const e_np1, const double * const e_n,
        double T_np1, double T_n,
        double t_np1, double t_n,
@@ -1126,24 +1068,21 @@ int SmallStrainCreepPlasticity::update_sd(
 
   // Solve the system to get the update
   SSCPTrialState ts;
-  int ier = make_trial_state(e_np1, e_n, T_np1, T_n, t_np1, t_n, s_n, h_n, ts);
-  if (ier != SUCCESS) return ier;
+  make_trial_state(e_np1, e_n, T_np1, T_n, t_np1, t_n, s_n, h_n, ts);
 
   std::vector<double> xv(nparams());
   double * x = &xv[0];
-  ier = solve(this, x, &ts, {rtol_, atol_, miter_, verbose_, linesearch_});
-  if (ier != 0) return ier;
+  solve(this, x, &ts, {rtol_, atol_, miter_, verbose_, linesearch_});
 
   // Store the ep strain
   std::copy(x, x+6, h_np1);
 
   // Do the plastic update to get the new history and stress
   double A[36];
-  ier =  plastic_->update_sd(x, ts.ep_strain, T_np1, T_n,
+  plastic_->update_sd(x, ts.ep_strain, T_np1, T_n,
                              t_np1, t_n, s_np1, s_n,
                              &h_np1[6], &h_n[6],
                              A, u_np1, u_n, p_np1, p_n);
-  if (ier != 0) return ier;
 
   // Do the creep update to get a tangent component
   double creep_old[6];
@@ -1152,13 +1091,11 @@ int SmallStrainCreepPlasticity::update_sd(
   for (int i=0; i<6; i++) {
     creep_old[i] = e_n[i] - ts.ep_strain[i];
   }
-  ier = creep_->update(s_np1, creep_new, creep_old, T_np1, T_n,
+  creep_->update(s_np1, creep_new, creep_old, T_np1, T_n,
                  t_np1, t_n, B);
-  if (ier != 0) return ier;
 
   // Form the relatively simple tangent
-  ier = form_tangent_(A, B, A_np1);
-  if (ier != 0) return ier;
+  form_tangent_(A, B, A_np1);
 
   // Energy calculation (trapezoid rule)
   double de[6];
@@ -1172,7 +1109,6 @@ int SmallStrainCreepPlasticity::update_sd(
   sub_vec(creep_new, creep_old, 6, dec);
   p_np1 += dot_vec(ds, dec, 6) / 2.0;
   
-  return 0;
 }
 
 size_t SmallStrainCreepPlasticity::nparams() const
@@ -1181,22 +1117,18 @@ size_t SmallStrainCreepPlasticity::nparams() const
   return 6;
 }
 
-int SmallStrainCreepPlasticity::init_x(double * const x, TrialState * ts)
+void SmallStrainCreepPlasticity::init_x(double * const x, TrialState * ts)
 {
   SSCPTrialState * tss = static_cast<SSCPTrialState*>(ts);
 
   // Start out at last step's value
   std::copy(tss->ep_strain, tss->ep_strain + 6, x);
-  
-  return 0;
 }
 
-int SmallStrainCreepPlasticity::RJ(const double * const x, TrialState * ts, 
+void SmallStrainCreepPlasticity::RJ(const double * const x, TrialState * ts, 
                                    double * const R, double * const J)
 {
   SSCPTrialState * tss = static_cast<SSCPTrialState*>(ts);
-
-  int ier;
 
   // First update the elastic-plastic model
   double s_np1[6];
@@ -1211,11 +1143,10 @@ int SmallStrainCreepPlasticity::RJ(const double * const x, TrialState * ts,
   double * hist = (h_np1.empty() ? nullptr : &h_np1[0]);
   double * hist_tss = (tss->h_n.empty() ? nullptr : &(tss->h_n[0]));
 
-  ier = plastic_->update_sd(x, tss->ep_strain, tss->T_np1, tss->T_n,
+  plastic_->update_sd(x, tss->ep_strain, tss->T_np1, tss->T_n,
                       tss->t_np1, tss->t_n, s_np1, tss->s_n,
                       hist, hist_tss, A_np1,
                       u_np1, u_n, p_np1, p_n);
-  if (ier != 0) return ier;
 
   // Then update the creep strain
   double creep_old[6];
@@ -1224,9 +1155,8 @@ int SmallStrainCreepPlasticity::RJ(const double * const x, TrialState * ts,
   for (int i=0; i<6; i++) {
     creep_old[i] = tss->e_n[i] - tss->ep_strain[i];
   }
-  ier = creep_->update(s_np1, creep_new, creep_old, tss->T_np1, tss->T_n,
+  creep_->update(s_np1, creep_new, creep_old, tss->T_np1, tss->T_n,
                  tss->t_np1, tss->t_n, B);
-  if (ier != 0) return ier;
 
   // Form the residual
   for (int i=0; i<6; i++) {
@@ -1234,14 +1164,12 @@ int SmallStrainCreepPlasticity::RJ(const double * const x, TrialState * ts,
   }
   
   // The Jacobian is a straightforward combination of the two derivatives
-  ier = mat_mat(6, 6, 6, B, A_np1, J);
+  mat_mat(6, 6, 6, B, A_np1, J);
   for (int i=0; i<6; i++) J[CINDEX(i,i,6)] += 1.0;
   for (int i=0; i<36; i++) J[i] *= sf_;
-
-  return ier;
 }
 
-int SmallStrainCreepPlasticity::make_trial_state(
+void SmallStrainCreepPlasticity::make_trial_state(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n, double t_np1, double t_n,
     const double * const s_n, const double * const h_n,
@@ -1261,10 +1189,9 @@ int SmallStrainCreepPlasticity::make_trial_state(
 
   std::copy(h_n, h_n+6, ts.ep_strain);
 
-  return 0;
 }
 
-int SmallStrainCreepPlasticity::form_tangent_(
+void SmallStrainCreepPlasticity::form_tangent_(
     double * const A, double * const B, double * const A_np1)
 {
   // Okay, what we really want to do is
@@ -1287,8 +1214,7 @@ int SmallStrainCreepPlasticity::form_tangent_(
   double C[36];
   mat_mat(6,6,6,A,B,C);
   for (int i=0; i<6; i++) C[CINDEX(i,i,6)] += 1.0;
-  int ier = invert_mat(C, 6);
-  if (ier != SUCCESS) return ier;
+  invert_mat(C, 6);
 
   double D[36];
   mat_mat(6,6,6,C,A,D);
@@ -1298,13 +1224,12 @@ int SmallStrainCreepPlasticity::form_tangent_(
   std::copy(A,A+36,A_np1);
   for (int i=0; i<36; i++) A_np1[i] -= D[i];
 
-  return 0;
 }
 
-int SmallStrainCreepPlasticity::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
+void SmallStrainCreepPlasticity::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
 {
   elastic_ = emodel;
-  return plastic_->set_elastic_model(emodel);
+  plastic_->set_elastic_model(emodel);
 }
 
 // Start general integrator implementation
@@ -1382,7 +1307,7 @@ bool GeneralIntegrator::elastic_step(
   return false;
 }
 
-int GeneralIntegrator::update_internal(
+void GeneralIntegrator::update_internal(
     const double * const x,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -1393,10 +1318,9 @@ int GeneralIntegrator::update_internal(
   std::copy(x, x+6, s_np1);
   std::copy(x+6, x+6+nhist(), h_np1);
 
-  return 0;
 }
 
-int GeneralIntegrator::strain_partial(
+void GeneralIntegrator::strain_partial(
     const TrialState * ts,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -1409,7 +1333,7 @@ int GeneralIntegrator::strain_partial(
   
   double * estress = new double [6*6];
 
-  int ier = rule_->ds_de(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, estress);
+  rule_->ds_de(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, estress);
   
   for (size_t i = 0; i < 6; i++) {
     for (size_t j = 0; j < 6; j++) {
@@ -1419,11 +1343,9 @@ int GeneralIntegrator::strain_partial(
 
   delete [] estress;
 
-  if (ier != SUCCESS) return ier;
-
   double * ehist = new double [6*nhist()];
 
-  ier = rule_->da_de(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, ehist);
+  rule_->da_de(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, ehist);
   for (size_t i = 0; i < nhist(); i++) {
     for (size_t j = 0; j < 6; j++) {
       de[CINDEX((i+6),j,6)] = ehist[CINDEX(i,j,6)];
@@ -1432,10 +1354,9 @@ int GeneralIntegrator::strain_partial(
 
   delete [] ehist;
 
-  return ier;
 }
 
-int GeneralIntegrator::work_and_energy(
+void GeneralIntegrator::work_and_energy(
     const TrialState * ts,
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
@@ -1462,7 +1383,6 @@ int GeneralIntegrator::work_and_energy(
   rule_->work_rate(s_n, h_n, tss->e_dot, T_n, tss->Tdot, p_dot_n);
   p_np1 = p_n + (p_dot_np1 + p_dot_n)/2.0 * tss->dt;
 
-  return 0;
 }
 
 size_t GeneralIntegrator::nhist() const
@@ -1470,9 +1390,9 @@ size_t GeneralIntegrator::nhist() const
   return rule_->nhist();
 }
 
-int GeneralIntegrator::init_hist(double * const hist) const
+void GeneralIntegrator::init_hist(double * const hist) const
 {
-  return rule_->init_hist(hist);
+  rule_->init_hist(hist);
 }
 
 size_t GeneralIntegrator::nparams() const
@@ -1480,18 +1400,16 @@ size_t GeneralIntegrator::nparams() const
   return 6 + nhist();
 }
 
-int GeneralIntegrator::init_x(double * const x, TrialState * ts)
+void GeneralIntegrator::init_x(double * const x, TrialState * ts)
 {
   GITrialState * tss = static_cast<GITrialState*>(ts);
   std::copy(tss->s_guess, tss->s_guess+6, x);
   std::copy(tss->h_n.begin(), tss->h_n.end(), &x[6]);
 
   rule_->override_guess(x);
-
-  return 0;
 }
 
-int GeneralIntegrator::RJ(const double * const x, TrialState * ts,
+void GeneralIntegrator::RJ(const double * const x, TrialState * ts,
                           double * const R, double * const J)
 {
   GITrialState * tss = static_cast<GITrialState*>(ts);
@@ -1507,21 +1425,18 @@ int GeneralIntegrator::RJ(const double * const x, TrialState * ts,
   int nparams = this->nparams();
 
   // Residual calculation
-  int ier = rule_->s(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, R);
-  if (ier != SUCCESS) return ier;
+  rule_->s(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, R);
   for (int i=0; i<6; i++) {
     R[i] = s_np1[i] - tss->s_n[i] - R[i] * tss->dt;
   }
-  ier = rule_->a(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, &R[6]);
-  if (ier != SUCCESS) return ier;
+  rule_->a(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, &R[6]);
   for (int i=0; i<nhist; i++) {
     R[i+6] = h_np1[i] - tss->h_n[i] - R[i+6] * tss->dt;
   }
 
   // Jacobian calculation
   double J11[36];
-  ier = rule_->ds_ds(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J11);
-  if (ier != SUCCESS) return ier;
+  rule_->ds_ds(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J11);
   for (int i=0; i<36; i++) J11[i] *= tss->dt;
   for (int i=0; i<6; i++) J11[CINDEX(i,i,6)] -= 1.0;
   for (int i=0; i<6; i++) {
@@ -1532,8 +1447,7 @@ int GeneralIntegrator::RJ(const double * const x, TrialState * ts,
   
   std::vector<double> J12v(6*nhist);
   double * J12 = &J12v[0];
-  ier = rule_->ds_da(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J12);
-  if (ier != SUCCESS) return ier;
+  rule_->ds_da(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J12);
   for (int i=0; i<6; i++) {
     for (int j=0; j<nhist; j++) {
       J[CINDEX(i,(j+6),nparams)] = -J12[CINDEX(i,j,nhist)] * tss->dt;
@@ -1542,8 +1456,7 @@ int GeneralIntegrator::RJ(const double * const x, TrialState * ts,
   
   std::vector<double> J21v(nhist*6);
   double * J21 = &J21v[0];
-  ier = rule_->da_ds(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J21);
-  if (ier != SUCCESS) return ier;
+  rule_->da_ds(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J21);
   for (int i=0; i<nhist; i++) {
     for (int j=0; j<6; j++) {
       J[CINDEX((i+6),j,nparams)] = -J21[CINDEX(i,j,6)] * tss->dt;
@@ -1552,8 +1465,7 @@ int GeneralIntegrator::RJ(const double * const x, TrialState * ts,
   
   std::vector<double> J22v(nhist*nhist);
   double * J22 = &J22v[0];
-  ier = rule_->da_da(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J22);
-  if (ier != SUCCESS) return ier;
+  rule_->da_da(s_np1, h_np1, tss->e_dot, tss->T, tss->Tdot, J22);
 
   // More vectorization
   double dt = tss->dt;
@@ -1565,12 +1477,10 @@ int GeneralIntegrator::RJ(const double * const x, TrialState * ts,
       J[CINDEX((i+6),(j+6),nparams)] = -J22[CINDEX(i,j,nhist)];
     }
   }
-  
-  return 0;
 }
 
 
-int GeneralIntegrator::make_trial_state(
+void GeneralIntegrator::make_trial_state(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n, double t_np1, double t_n,
     const double * const s_n, const double * const h_n,
@@ -1611,13 +1521,13 @@ int GeneralIntegrator::make_trial_state(
   if ((t_n == 0.0) && (skip_first_))
     std::copy(s_n, s_n+6, ts.s_guess);
 
-  return 0;
 }
 
-int GeneralIntegrator::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
+void GeneralIntegrator::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
 {
   elastic_ = emodel;
-  return rule_->set_elastic_model(emodel);
+  rule_->set_elastic_model(emodel);
+
 }
 
 // Start KMRegimeModel
@@ -1661,7 +1571,7 @@ std::unique_ptr<NEMLObject> KMRegimeModel::initialize(ParameterSet & params)
   return neml::make_unique<KMRegimeModel>(params); 
 }
 
-int KMRegimeModel::update_sd(
+void KMRegimeModel::update_sd(
     const double * const e_np1, const double * const e_n,
     double T_np1, double T_n,
     double t_np1, double t_n,
@@ -1693,7 +1603,7 @@ size_t KMRegimeModel::nhist() const
   return models_[0]->nhist();
 }
 
-int KMRegimeModel::init_hist(double * const hist) const
+void KMRegimeModel::init_hist(double * const hist) const
 {
   return models_[0]->init_hist(hist);
 }
@@ -1714,15 +1624,12 @@ double KMRegimeModel::activation_energy_(const double * const e_np1,
   return kboltz_ * T_np1 / (mu* pow(b_, 3.0)) * log(eps0_ / rate);
 }
 
-int KMRegimeModel::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
+void KMRegimeModel::set_elastic_model(std::shared_ptr<LinearElasticModel> emodel)
 {
   elastic_ = emodel;
-  int ier;
   for (auto it = models_.begin(); it != models_.end(); ++it) {
-    ier = (*it)->set_elastic_model(emodel);
-    if (ier != SUCCESS) return ier;
+    (*it)->set_elastic_model(emodel);
   }
-  return 0;
 }
 
 } // namespace neml

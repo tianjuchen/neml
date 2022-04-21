@@ -12,21 +12,21 @@
 namespace neml {
 
 // This function is configured by the build
-int solve(Solvable * system, double * x, TrialState * ts,
+void solve(Solvable * system, double * x, TrialState * ts,
           SolverParameters p, double * R, double * J)
 {
 #ifdef SOLVER_NOX
-  return nox(system, x, ts, p.atol, p.miter, p.verbose, R, J);
+  nox(system, x, ts, p.atol, p.miter, p.verbose, R, J);
 #elif SOLVER_NEWTON
   // Actually selected the newton solver
-  return newton(system, x, ts, p, R, J);
+  newton(system, x, ts, p, R, J);
 #else
   // Default solver: plain NR
-  return newton(system, x, ts, p, R, J);
+  newton(system, x, ts, p, R, J);
 #endif
 }
 
-int newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, double * R,
+void newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, double * R,
            double * J)
 {
   int mline = 10;
@@ -44,10 +44,7 @@ int newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, d
     J = new double [n*n];
   }
 
-  int ier = 0;
-
-  ier = system->RJ(x, ts, R, J);
-  if (ier != SUCCESS) return ier;
+  system->RJ(x, ts, R, J);
 
   double nR = norm2_vec(R, n);
   double nR0 = nR;
@@ -73,8 +70,7 @@ int newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, d
   {
     if ((nR < p.atol) || ((nR / nR0) < p.rtol)) break;
 
-    ier = solve_mat(J, n, R);
-    if (ier != SUCCESS) break;
+    solve_mat(J, n, R);
 
     if (p.linesearch) {
       int nsearch = 0;
@@ -87,11 +83,7 @@ int newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, d
       bool linesearch_error = false;
       while (nsearch < mline) {
         for (int j=0; j<n; j++) x[j] = x_orig[j] - alpha * dir[j];
-        ier = system->RJ(x, ts, R, J);
-        if (ier != SUCCESS) {
-          linesearch_error = true;
-          break;
-        }
+        system->RJ(x, ts, R, J);
         nRt = norm2_vec(R, n);
         if (nRt < nR) break;
         alpha /= 2.0;
@@ -104,15 +96,14 @@ int newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, d
       }
       nR = nRt;
       if (nsearch == mline) {
-        // Arguably it's better to let it fall through
-        // ier = MAX_ITERATIONS;
-        // break;
+        // Arguably it's better to let it fall through, but we could
+        // raise a NonlinearSolverError right now with a line search
+        // failed message
       }
     }
     else {
       for (int j=0; j<n; j++) x[j] -= R[j];
-      ier = system->RJ(x, ts, R, J);
-      if (ier != SUCCESS) break;
+      system->RJ(x, ts, R, J);
       nR = norm2_vec(R, n);
     }
     i++;
@@ -140,15 +131,12 @@ int newton(Solvable * system, double * x, TrialState * ts, SolverParameters p, d
     delete [] J;
   }
 
-  if (ier != SUCCESS) return ier;
-
-  if (i == p.miter) return MAX_ITERATIONS;
-
-  return SUCCESS;
+  if (i == p.miter) 
+    throw NonlinearSolverError("Nonlinear solver exceeded maximum allowed iterations!");
 }
 
 /// Helper to get numerical jacobian
-int diff_jac(Solvable * system, const double * const x, TrialState * ts,
+void diff_jac(Solvable * system, const double * const x, TrialState * ts,
              double * const nJ, double eps)
 {
   std::vector<double> R0v(system->nparams());
@@ -173,8 +161,6 @@ int diff_jac(Solvable * system, const double * const x, TrialState * ts,
       nJ[CINDEX(j,i,system->nparams())] = (nR[j] - R0[j]) / dx;
     }
   }
-  
-  return 0;
 }
 
 /// Helper to get checksum
@@ -263,7 +249,7 @@ bool NOXSolver::computeJacobian(NOX::LAPACK::Matrix<double>& J,
 }
 
 
-int nox(Solvable * system, double * x, TrialState * ts,
+void nox(Solvable * system, double * x, TrialState * ts,
         double tol, int miter, bool verbose, double * R,
         double * J)
 {
@@ -319,7 +305,7 @@ int nox(Solvable * system, double * x, TrialState * ts,
 
   // Check if we actually succeeded
   if (result != NOX::StatusTest::Converged) {
-    return MAX_ITERATIONS; 
+    throw NonlinearSolverError("Nonlinear solver exceeded maximum allowed iterations!");
   }
 
   // Get the solution
@@ -350,9 +336,6 @@ int nox(Solvable * system, double * x, TrialState * ts,
       delete [] J;
     }
   }
-
-
-  return 0;
 }
 
 #endif
@@ -368,18 +351,16 @@ size_t TestPower::nparams() const
   return 1;
 }
 
-int TestPower::init_x(double * const x, TrialState * ts)
+void TestPower::init_x(double * const x, TrialState * ts)
 {
   x[0] = x0_;
-  return 0;
 }
 
-int TestPower::RJ(const double * const x, TrialState * ts, double * const R, 
+void TestPower::RJ(const double * const x, TrialState * ts, double * const R, 
        double * const J)
 {
   R[0] = A_ * std::pow(x[0], n_) + b_;
   J[0] = A_ * n_ * std::pow(x[0], n_-1.0);
-  return 0;
 }
 
 

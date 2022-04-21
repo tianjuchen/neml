@@ -127,7 +127,7 @@ void SingleCrystalModel::Fe(double * const stress, double * const hist,
   FE = ((Symmetric::id() + estrain) * RR).inverse();
 }
 
-int SingleCrystalModel::update_ld_inc(
+void SingleCrystalModel::update_ld_inc(
    const double * const d_np1, const double * const d_n,
    const double * const w_np1, const double * const w_n,
    double T_np1, double T_n,
@@ -138,47 +138,48 @@ int SingleCrystalModel::update_ld_inc(
    double & u_np1, double u_n,
    double & p_np1, double p_n)
 {
-  int ier;
   // First step
   if ((t_n == 0.0) && elastic_predictor_first_step_) {
-    ier =  attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
+    attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
                                     T_np1, T_n, t_np1, t_n,
                                     s_np1, s_n, h_np1, h_n, 
                                     A_np1, B_np1, u_np1, u_n,
                                     p_np1, p_n, 1);
-    return ier;
+    return;
   }
 
   // Try with a predictor
   if (elastic_predictor_) {
-    ier =  attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
+    attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
                                     T_np1, T_n, t_np1, t_n,
                                     s_np1, s_n, h_np1, h_n, 
                                     A_np1, B_np1, u_np1, u_n,
                                     p_np1, p_n, 1);
   }
   else {
-  // Base update (no elastic predictor)
-  ier =  attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
-                                T_np1, T_n, t_np1, t_n,
-                                s_np1, s_n, h_np1, h_n, 
-                                A_np1, B_np1, u_np1, u_n,
-                                p_np1, p_n, 0);
-    // If it fails try with an elastic predictor
-    if ((ier != 0) && (fallback_elastic_predictor_)) {
-      ier =  attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
-                                      T_np1, T_n, t_np1, t_n,
-                                      s_np1, s_n, h_np1, h_n, 
-                                      A_np1, B_np1, u_np1, u_n,
-                                      p_np1, p_n, 1);
+    // Base update (no elastic predictor)
+    try {
+      attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
+                                    T_np1, T_n, t_np1, t_n,
+                                    s_np1, s_n, h_np1, h_n, 
+                                    A_np1, B_np1, u_np1, u_n,
+                                    p_np1, p_n, 0);
+    }
+    catch (const NEMLError & e) {
+      // If it fails try with an elastic predictor
+      if (fallback_elastic_predictor_)
+        attempt_update_ld_inc_(d_np1, d_n, w_np1, w_n,
+                               T_np1, T_n, t_np1, t_n,
+                               s_np1, s_n, h_np1, h_n, 
+                               A_np1, B_np1, u_np1, u_n,
+                               p_np1, p_n, 1);
+      else
+        throw e;
     }
   }
-  
-  return ier;
-
 }
 
-int SingleCrystalModel::attempt_update_ld_inc_(
+void SingleCrystalModel::attempt_update_ld_inc_(
    const double * const d_np1, const double * const d_n,
    const double * const w_np1, const double * const w_n,
    double T_np1, double T_n,
@@ -265,9 +266,10 @@ int SingleCrystalModel::attempt_update_ld_inc_(
                        fixed);
 
     // Solve the update
-    int ier = solve_substep_(&trial, S_np1, H_np1);
-
-    if (ier != 0) {
+    try {
+      solve_substep_(&trial, S_np1, H_np1);
+    }
+    catch (const NEMLError & e) {
       subdiv++;
       cur_int_inc /= 2;
 
@@ -283,31 +285,29 @@ int SingleCrystalModel::attempt_update_ld_inc_(
         if (verbose_) {
           std::cout << "Adaptive substepping failed!" << std::endl;
         }
-        return ier;
+        throw NonlinearSolverError("Exceeded maximum adaptive subdivisions");
       }
+      continue;
     }
-    else {
-      progress += cur_int_inc;
-      if (verbose_) {
-        std::cout << "Adaptive substep succeeded" << std::endl;
-        std::cout << "Current progress " << progress << " out of " << target <<
-            std::endl;
-      }
-      
-      // Calc tangent if we're going to be done
-      if (progress == target) {
-        // Tangent
-        calc_tangents_(S_np1, H_np1, &trial, A_np1, B_np1);
+    progress += cur_int_inc;
+    if (verbose_) {
+      std::cout << "Adaptive substep succeeded" << std::endl;
+      std::cout << "Current progress " << progress << " out of " << target <<
+          std::endl;
+    }
+    
+    // Calc tangent if we're going to be done
+    if (progress == target) {
+      // Tangent
+      calc_tangents_(S_np1, H_np1, &trial, A_np1, B_np1);
 
-        // Calculate the new rotation, if requested
-        if (update_rotation_) {
-          HF_np1.get<Orientation>("rotation") = update_rot_(S_np1, H_np1, &trial);
-        }
-        else {
-          HF_np1.get<Orientation>("rotation") = Q_n;
-        }
+      // Calculate the new rotation, if requested
+      if (update_rotation_) {
+        HF_np1.get<Orientation>("rotation") = update_rot_(S_np1, H_np1, &trial);
       }
-
+      else {
+        HF_np1.get<Orientation>("rotation") = Q_n;
+      }
     }
   }
   /* End adaptive stepping */
@@ -328,8 +328,6 @@ int SingleCrystalModel::attempt_update_ld_inc_(
   // Update model based on any post-processors
   for (auto pp : postprocessors_)
     pp->act(*this, local_lattice, T_np1, D, W, HF_np1, HF_n);
-
-  return 0;
 }
 
 size_t SingleCrystalModel::nhist() const
@@ -337,12 +335,11 @@ size_t SingleCrystalModel::nhist() const
   return stored_hist_.size();
 }
 
-int SingleCrystalModel::init_hist(double * const hist) const
+void SingleCrystalModel::init_hist(double * const hist) const
 {
   std::fill(hist, hist+nhist(), 0.0); // Shuts it up about initialized memory
   History h = gather_history_(hist);
   init_history(h);
-  return 0;
 }
 
 double SingleCrystalModel::alpha(double T) const
@@ -350,7 +347,7 @@ double SingleCrystalModel::alpha(double T) const
   return alpha_->value(T);
 }
 
-int SingleCrystalModel::elastic_strains(
+void SingleCrystalModel::elastic_strains(
     const double * const s_np1,
     double T_np1, const double * const h_np1,
     double * const e_np1) const
@@ -363,8 +360,6 @@ int SingleCrystalModel::elastic_strains(
                                                    h.get<Orientation>("rotation"), 
                                                    h, T_np1);
   std::copy(estrain.data(), estrain.data()+6, e_np1);
-
-  return 0;
 }
 
 size_t SingleCrystalModel::nparams() const
@@ -372,15 +367,14 @@ size_t SingleCrystalModel::nparams() const
   return 6 + nhist() - static_size_;
 }
 
-int SingleCrystalModel::init_x(double * const x, TrialState * ts)
+void SingleCrystalModel::init_x(double * const x, TrialState * ts)
 {
   SCTrialState * ats = static_cast<SCTrialState*>(ts);
   std::copy(ats->S.data(), ats->S.data()+6, x);
   std::copy(ats->history.rawptr(), ats->history.rawptr()+ats->history.size(), &x[6]);
-  return 0;
 }
 
-int SingleCrystalModel::RJ(const double * const x, TrialState * ts,
+void SingleCrystalModel::RJ(const double * const x, TrialState * ts,
                            double * const R, double * const J)
 {
   // Cast trial state
@@ -450,8 +444,6 @@ int SingleCrystalModel::RJ(const double * const x, TrialState * ts,
   for (size_t i = 0; i<nparams(); i++) {
     J[CINDEX(i,i,nparams())] += 1.0;
   }
-
-  return 0;
 }
 
 Orientation SingleCrystalModel::get_active_orientation(
@@ -760,22 +752,17 @@ double SingleCrystalModel::calc_work_inc_(
   return dU - dE;
 }
 
-int SingleCrystalModel::solve_substep_(SCTrialState * ts,
+void SingleCrystalModel::solve_substep_(SCTrialState * ts,
                                        Symmetric & stress,
                                        History & hist)
 {
   std::vector<double> xv(nparams());
   double * x = &xv[0];
-  int ier = solve(this, x, ts, {rtol_, atol_, miter_, verbose_, linesearch_});
-
-  // Only dump into new stress and hist if we pass
-  if (ier != 0) return ier;
+  solve(this, x, ts, {rtol_, atol_, miter_, verbose_, linesearch_});
 
   // Dump the results
   stress.copy_data(x);
   hist.copy_data(&x[6]);
-
-  return ier;
 }
 
 std::vector<std::string> SingleCrystalModel::not_updated_() const

@@ -14,103 +14,91 @@ ViscoPlasticFlowRule::ViscoPlasticFlowRule(ParameterSet & params) :
 }
 
 // Default implementation of flow rule wrt time
-int ViscoPlasticFlowRule::g_time(const double * const s, 
+void ViscoPlasticFlowRule::g_time(const double * const s, 
                                  const double * const alpha, double T, 
                                  double * const gv) const
 {
   std::fill(gv, gv+6, 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dg_ds_time(const double * const s, 
+void ViscoPlasticFlowRule::dg_ds_time(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dgv) const
 {
   std::fill(dgv, dgv+36, 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dg_da_time(const double * const s, 
+void ViscoPlasticFlowRule::dg_da_time(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dgv) const
 {
   std::fill(dgv, dgv+6*nhist(), 0.0);
-  return 0;
 }
 
 // Default implementation of flow rule wrt temperature
-int ViscoPlasticFlowRule::g_temp(const double * const s, 
+void ViscoPlasticFlowRule::g_temp(const double * const s, 
                                  const double * const alpha, double T, 
                                  double * const gv) const
 {
   std::fill(gv, gv+6, 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dg_ds_temp(const double * const s, 
+void ViscoPlasticFlowRule::dg_ds_temp(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dgv) const
 {
   std::fill(dgv, dgv+36, 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dg_da_temp(const double * const s, 
+void ViscoPlasticFlowRule::dg_da_temp(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dgv) const
 {
   std::fill(dgv, dgv+6*nhist(), 0.0);
-  return 0;
 }
 
 // Default implementation of hardening rule wrt time
-int ViscoPlasticFlowRule::h_time(const double * const s, 
+void ViscoPlasticFlowRule::h_time(const double * const s, 
                                  const double * const alpha, double T, 
                                  double * const hv) const
 {
   std::fill(hv, hv+nhist(), 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dh_ds_time(const double * const s, 
+void ViscoPlasticFlowRule::dh_ds_time(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dhv) const
 {
   std::fill(dhv, dhv+6*nhist(), 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dh_da_time(const double * const s, 
+void ViscoPlasticFlowRule::dh_da_time(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dhv) const
 {
   std::fill(dhv, dhv+nhist()*nhist(), 0.0);
-  return 0;
 }
 
 // Default implementation of hardening rule wrt temperature
-int ViscoPlasticFlowRule::h_temp(const double * const s, 
+void ViscoPlasticFlowRule::h_temp(const double * const s, 
                                  const double * const alpha, double T, 
                                  double * const hv) const
 {
   std::fill(hv, hv+nhist(), 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dh_ds_temp(const double * const s, 
+void ViscoPlasticFlowRule::dh_ds_temp(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dhv) const
 {
   std::fill(dhv, dhv+6*nhist(), 0.0);
-  return 0;
 }
 
-int ViscoPlasticFlowRule::dh_da_temp(const double * const s, 
+void ViscoPlasticFlowRule::dh_da_temp(const double * const s, 
                                      const double * const alpha, double T,
                                      double * const dhv) const
 {
   std::fill(dhv, dhv+nhist()*nhist(), 0.0);
-  return 0;
 }
 
 void ViscoPlasticFlowRule::override_guess(double * const guess)
@@ -209,26 +197,25 @@ size_t PerzynaFlowRule::nhist() const
   return hardening_->nhist();
 }
 
-int PerzynaFlowRule::init_hist(double * const h) const
+void PerzynaFlowRule::init_hist(double * const h) const
 {
   if (surface_->nhist() != hardening_->nhist()) {
-    return INCOMPATIBLE_MODELS;
+    throw NEMLError("Hardening model and flow surface are not compatible");
   }
-  return hardening_->init_hist(h);
+  hardening_->init_hist(h);
+
 }
 
 // Rate rule
-int PerzynaFlowRule::y(const double* const s, const double* const alpha, double T,
+void PerzynaFlowRule::y(const double* const s, const double* const alpha, double T,
               double & yv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
   double fv;
-  ier = surface_->f(s, q, T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s, q, T, fv);
 
   if (fv > 0.0) {
     yv = g_->g(fabs(fv), T);
@@ -237,46 +224,39 @@ int PerzynaFlowRule::y(const double* const s, const double* const alpha, double 
     yv = 0.0;
   }
 
-  return 0;
 }
 
-int PerzynaFlowRule::dy_ds(const double* const s, const double* const alpha, double T,
+void PerzynaFlowRule::dy_ds(const double* const s, const double* const alpha, double T,
               double * const dyv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
   double fv;
-  ier = surface_->f(s, q, T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s, q, T, fv);
 
   std::fill(dyv, dyv + 6, 0.0);
 
   if (fv > 0.0) {
     double dgv = g_->dg(fabs(fv), T);
-    int ier = surface_->df_ds(s, q, T, dyv);
-    if (ier != SUCCESS) return ier;
+    surface_->df_ds(s, q, T, dyv);
     for (int i=0; i<6; i++) {
       dyv[i] *= dgv;
     }
   }
   
-  return 0;
 }
 
-int PerzynaFlowRule::dy_da(const double* const s, const double* const alpha, double T,
+void PerzynaFlowRule::dy_da(const double* const s, const double* const alpha, double T,
               double * const dyv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
   double fv;
-  ier = surface_->f(s, q, T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s, q, T, fv);
 
   std::fill(dyv, dyv + nhist(), 0.0);
 
@@ -285,112 +265,98 @@ int PerzynaFlowRule::dy_da(const double* const s, const double* const alpha, dou
     
     std::vector<double> jacv(nhist()*nhist());
     double * jac = &jacv[0];
-    ier = hardening_->dq_da(alpha, T, jac);
-    if (ier != SUCCESS) return ier;
+    hardening_->dq_da(alpha, T, jac);
     
     std::vector<double> rdv(nhist());
     double * rd = &rdv[0];
-    ier = surface_->df_dq(s, q, T, rd);
-    if (ier != SUCCESS) return ier;
+    surface_->df_dq(s, q, T, rd);
 
-    ier = mat_vec_trans(jac, nhist(), rd, nhist(), dyv);
-    if (ier != SUCCESS) return ier;
+    mat_vec_trans(jac, nhist(), rd, nhist(), dyv);
 
     for (size_t i=0; i<nhist(); i++) {
       dyv[i] *= dgv;
     }
   }
 
-  return 0;
 
 }
 
 // Flow rule
-int PerzynaFlowRule::g(const double * const s, const double * const alpha, double T,
+void PerzynaFlowRule::g(const double * const s, const double * const alpha, double T,
               double * const gv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
-  return surface_->df_ds(s, q, T, gv);
+  surface_->df_ds(s, q, T, gv);
 }
 
-int PerzynaFlowRule::dg_ds(const double * const s, const double * const alpha, double T,
+void PerzynaFlowRule::dg_ds(const double * const s, const double * const alpha, double T,
               double * const dgv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
-  return surface_->df_dsds(s, q, T, dgv);
+  surface_->df_dsds(s, q, T, dgv);
 }
 
-int PerzynaFlowRule::dg_da(const double * const s, const double * const alpha, double T,
+void PerzynaFlowRule::dg_da(const double * const s, const double * const alpha, double T,
              double * const dgv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
   
   std::vector<double> jacv(nhist() * nhist());
   double * jac = &jacv[0];
-  ier = hardening_->dq_da(alpha, T, jac);
-  if (ier != SUCCESS) return ier;
+  hardening_->dq_da(alpha, T, jac);
   
   std::vector<double> ddv(6*nhist());
   double * dd = &ddv[0];
-  ier = surface_->df_dsdq(s, q, T, dd);
-  if (ier != SUCCESS) return ier;
+  surface_->df_dsdq(s, q, T, dd);
 
-  return mat_mat(6, nhist(), nhist(), dd, jac, dgv);
+  mat_mat(6, nhist(), nhist(), dd, jac, dgv);
 }
 
 // Hardening rule
-int PerzynaFlowRule::h(const double * const s, const double * const alpha, double T,
+void PerzynaFlowRule::h(const double * const s, const double * const alpha, double T,
               double * const hv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
-  return surface_->df_dq(s, q, T, hv);
+  surface_->df_dq(s, q, T, hv);
 }
 
-int PerzynaFlowRule::dh_ds(const double * const s, const double * const alpha, double T,
+void PerzynaFlowRule::dh_ds(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
-  return surface_->df_dqds(s, q, T, dhv);
+  surface_->df_dqds(s, q, T, dhv);
 }
 
-int PerzynaFlowRule::dh_da(const double * const s, const double * const alpha, double T,
+void PerzynaFlowRule::dh_da(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
   std::vector<double> qv(nhist());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
   
   std::vector<double> jacv(nhist() * nhist());
   double * jac = &jacv[0];
-  ier = hardening_->dq_da(alpha, T, jac);
-  if (ier != SUCCESS) return ier;
+  hardening_->dq_da(alpha, T, jac);
   
   std::vector<double> ddv(nhist() * nhist());
   double * dd = &ddv[0];
-  ier = surface_->df_dqdq(s, q, T, dd);
-  if (ier != SUCCESS) return ier;
+  surface_->df_dqdq(s, q, T, dd);
 
-  return mat_mat(nhist(), nhist(), nhist(), dd, jac, dhv);
+  mat_mat(nhist(), nhist(), nhist(), dd, jac, dhv);
 }
 
 FluidityModel::FluidityModel(ParameterSet & params) :
@@ -524,26 +490,24 @@ size_t ChabocheFlowRule::nhist() const
   return hardening_->nhist();
 }
 
-int ChabocheFlowRule::init_hist(double * const h) const
+void ChabocheFlowRule::init_hist(double * const h) const
 {
   if (surface_->nhist() != hardening_->ninter()) {
-    return INCOMPATIBLE_MODELS;
+    throw NEMLError("Hardening model and flow surface are not compatible");
   }
-  return hardening_->init_hist(h);
+  hardening_->init_hist(h);
 }
 
 // Rate rule
-int ChabocheFlowRule::y(const double* const s, const double* const alpha, double T,
+void ChabocheFlowRule::y(const double* const s, const double* const alpha, double T,
               double & yv) const
 {
   std::vector<double> qv(hardening_->ninter());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
   
   double fv;
-  ier = surface_->f(s, q, T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s, q, T, fv);
 
   if (fv > 0.0) {
     double eta = sqrt(2.0 / 3.0) * fluidity_->eta(alpha[0], T);
@@ -552,27 +516,22 @@ int ChabocheFlowRule::y(const double* const s, const double* const alpha, double
     yv = 0.0;
   }
 
-  return 0;
 }
 
-int ChabocheFlowRule::dy_ds(const double* const s, const double* const alpha, double T,
+void ChabocheFlowRule::dy_ds(const double* const s, const double* const alpha, double T,
               double * const dyv) const
 {
   std::vector<double> qv(hardening_->ninter());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
  
   double fv;
-  ier = surface_->f(s, q, T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s, q, T, fv);
   
   std::fill(dyv, dyv+6, 0.0);
 
   if (fv > 0.0) {
-    ier = surface_->df_ds(s, q, T, dyv);
-    if (ier != SUCCESS)
-      return ier;
+    surface_->df_ds(s, q, T, dyv);
     double eta = sqrt(2.0 / 3.0) * fluidity_->eta(alpha[0], T);
     double mv = sqrt(3.0 / 2.0) * pow(fv / eta, n_->value(T) - 1.0) *
                 n_->value(T) / eta * prefactor_->value(T);
@@ -580,36 +539,30 @@ int ChabocheFlowRule::dy_ds(const double* const s, const double* const alpha, do
       dyv[i] *= mv;
   }
 
-  return 0;
 }
 
-int ChabocheFlowRule::dy_da(const double* const s, const double* const alpha, double T,
+void ChabocheFlowRule::dy_da(const double* const s, const double* const alpha, double T,
               double * const dyv) const
 {
   std::vector<double> qv(hardening_->ninter());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
   double fv;
-  ier = surface_->f(s, q, T, fv);
-  if (ier != SUCCESS) return ier;
+  surface_->f(s, q, T, fv);
 
   std::fill(dyv, dyv + nhist(), 0.0);
 
   if (fv > 0.0) {
     std::vector<double> jacv(hardening_->ninter() * nhist());
     double * jac = &jacv[0];
-    ier = hardening_->dq_da(alpha, T, jac);
-    if (ier != SUCCESS) return ier;
+    hardening_->dq_da(alpha, T, jac);
     
     std::vector<double> dqv(hardening_->ninter());
     double * dq = &dqv[0];
-    ier = surface_->df_dq(s, q, T, dq);
-    if (ier != SUCCESS) return ier;
+    surface_->df_dq(s, q, T, dq);
 
-    ier = mat_vec_trans(jac, nhist(), dq, hardening_->ninter(), dyv);
-    if (ier != SUCCESS) return ier;
+    mat_vec_trans(jac, nhist(), dq, hardening_->ninter(), dyv);
 
     double eta = sqrt(2.0/3.0) * fluidity_->eta(alpha[0], T);
     double mv = sqrt(3.0 / 2.0) * pow(fv / eta, n_->value(T) - 1.0) *
@@ -624,109 +577,103 @@ int ChabocheFlowRule::dy_da(const double* const s, const double* const alpha, do
     dyv[0] += deta * mv2;
   }
 
-  return 0;
 
 }
 
 // Flow rule
-int ChabocheFlowRule::g(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::g(const double * const s, const double * const alpha, double T,
               double * const gv) const
 {
   std::vector<double> qv(hardening_->ninter());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
-  return surface_->df_ds(s, q, T, gv);
+  surface_->df_ds(s, q, T, gv);
 }
 
-int ChabocheFlowRule::dg_ds(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dg_ds(const double * const s, const double * const alpha, double T,
               double * const dgv) const
 {
   std::vector<double> qv(hardening_->ninter());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
 
-  return surface_->df_dsds(s, q, T, dgv);
+  surface_->df_dsds(s, q, T, dgv);
 }
 
-int ChabocheFlowRule::dg_da(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dg_da(const double * const s, const double * const alpha, double T,
              double * const dgv) const
 {
   std::vector<double> qv(hardening_->ninter());
   double * q = &qv[0];
-  int ier = hardening_->q(alpha, T, q);
-  if (ier != SUCCESS) return ier;
+  hardening_->q(alpha, T, q);
   
   std::vector<double> jacv(hardening_->ninter() * nhist());
   double * jac = &jacv[0];
-  ier = hardening_->dq_da(alpha, T, jac);
-  if (ier != SUCCESS) return ier;
+  hardening_->dq_da(alpha, T, jac);
   
   std::vector<double> ddv(6 * hardening_->ninter());
   double * dd = &ddv[0];
-  ier = surface_->df_dsdq(s, q, T, dd);
-  if (ier != SUCCESS) return ier;
+  surface_->df_dsdq(s, q, T, dd);
 
-  return mat_mat(6, nhist(), hardening_->ninter(), dd, jac, dgv);
+  mat_mat(6, nhist(), hardening_->ninter(), dd, jac, dgv);
 }
 
 // Hardening rule
-int ChabocheFlowRule::h(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::h(const double * const s, const double * const alpha, double T,
               double * const hv) const
 {
-  return hardening_->h(s, alpha, T, hv);
+  hardening_->h(s, alpha, T, hv);
 }
 
-int ChabocheFlowRule::dh_ds(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dh_ds(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
-  return hardening_->dh_ds(s, alpha, T, dhv);
+  hardening_->dh_ds(s, alpha, T, dhv);
 }
 
-int ChabocheFlowRule::dh_da(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dh_da(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
-  return hardening_->dh_da(s, alpha, T, dhv);
+  hardening_->dh_da(s, alpha, T, dhv);
 }
 
 // Hardening rule wrt time
-int ChabocheFlowRule::h_time(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::h_time(const double * const s, const double * const alpha, double T,
               double * const hv) const
 {
-  return hardening_->h_time(s, alpha, T, hv);
+  hardening_->h_time(s, alpha, T, hv);
 }
 
-int ChabocheFlowRule::dh_ds_time(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dh_ds_time(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
-  return hardening_->dh_ds_time(s, alpha, T, dhv);
+  hardening_->dh_ds_time(s, alpha, T, dhv);
 }
 
-int ChabocheFlowRule::dh_da_time(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dh_da_time(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
-  return hardening_->dh_da_time(s, alpha, T, dhv);
+  hardening_->dh_da_time(s, alpha, T, dhv);
 }
 
 // Hardening rule wrt temperature
-int ChabocheFlowRule::h_temp(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::h_temp(const double * const s, const double * const alpha, double T,
               double * const hv) const
 {
-  return hardening_->h_temp(s, alpha, T, hv);
+  hardening_->h_temp(s, alpha, T, hv);
 }
 
-int ChabocheFlowRule::dh_ds_temp(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dh_ds_temp(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
-  return hardening_->dh_ds_temp(s, alpha, T, dhv);
+  hardening_->dh_ds_temp(s, alpha, T, dhv);
 }
 
-int ChabocheFlowRule::dh_da_temp(const double * const s, const double * const alpha, double T,
+void ChabocheFlowRule::dh_da_temp(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
-  return hardening_->dh_da_temp(s, alpha, T, dhv);
+  hardening_->dh_da_temp(s, alpha, T, dhv);
 }
 
 YaguchiGr91FlowRule::YaguchiGr91FlowRule(ParameterSet & params) : 
@@ -763,7 +710,7 @@ size_t YaguchiGr91FlowRule::nhist() const
   return 14;
 }
 
-int YaguchiGr91FlowRule::init_hist(double * const h) const
+void YaguchiGr91FlowRule::init_hist(double * const h) const
 {
   // This also hardcoded from the paper
   
@@ -776,12 +723,11 @@ int YaguchiGr91FlowRule::init_hist(double * const h) const
   // sa
   h[13] = 0.0;
 
-  return 0;
 
 }
 
 // Rate rule
-int YaguchiGr91FlowRule::y(const double* const s, const double* const alpha, double T,
+void YaguchiGr91FlowRule::y(const double* const s, const double* const alpha, double T,
               double & yv) const
 {
   double nT = n(T);
@@ -802,10 +748,9 @@ int YaguchiGr91FlowRule::y(const double* const s, const double* const alpha, dou
     yv = 0.0;
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dy_ds(const double* const s, const double* const alpha, double T,
+void YaguchiGr91FlowRule::dy_ds(const double* const s, const double* const alpha, double T,
               double * const dyv) const
 {
   std::fill(dyv, dyv+6, 0.0);
@@ -835,10 +780,9 @@ int YaguchiGr91FlowRule::dy_ds(const double* const s, const double* const alpha,
     std::fill(dyv, dyv+6, 0.0);
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dy_da(const double* const s, const double* const alpha, double T,
+void YaguchiGr91FlowRule::dy_da(const double* const s, const double* const alpha, double T,
               double * const dyv) const
 {
   std::fill(dyv, dyv+nhist(), 0.0);
@@ -887,12 +831,11 @@ int YaguchiGr91FlowRule::dy_da(const double* const s, const double* const alpha,
   }
   
 
-  return 0;
 
 }
 
 // Flow rule
-int YaguchiGr91FlowRule::g(const double * const s, const double * const alpha, double T,
+void YaguchiGr91FlowRule::g(const double * const s, const double * const alpha, double T,
               double * const gv) const
 {
   std::fill(gv, gv+6, 0.0);
@@ -913,10 +856,9 @@ int YaguchiGr91FlowRule::g(const double * const s, const double * const alpha, d
     }
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dg_ds(const double * const s, const double * const alpha, double T,
+void YaguchiGr91FlowRule::dg_ds(const double * const s, const double * const alpha, double T,
               double * const dgv) const
 {
   std::fill(dgv, dgv+36, 0.0);
@@ -955,10 +897,9 @@ int YaguchiGr91FlowRule::dg_ds(const double * const s, const double * const alph
     dgv[i] *= 3.0/(2.0 * j2);
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dg_da(const double * const s, const double * const alpha, double T,
+void YaguchiGr91FlowRule::dg_da(const double * const s, const double * const alpha, double T,
              double * const dgv) const
 {
   // Only the X terms have derivatives
@@ -977,11 +918,10 @@ int YaguchiGr91FlowRule::dg_da(const double * const s, const double * const alph
     }
   }
 
-  return 0;
 }
 
 // Hardening rule
-int YaguchiGr91FlowRule::h(const double * const s, const double * const alpha, double T,
+void YaguchiGr91FlowRule::h(const double * const s, const double * const alpha, double T,
               double * const hv) const
 {
   std::fill(hv, hv+nhist(), 0.0);
@@ -1048,10 +988,9 @@ int YaguchiGr91FlowRule::h(const double * const s, const double * const alpha, d
     hv[13] = 0.0;
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dh_ds(const double * const s, const double * const alpha, double T,
+void YaguchiGr91FlowRule::dh_ds(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
   // Only the X terms have derivatives
@@ -1098,10 +1037,9 @@ int YaguchiGr91FlowRule::dh_ds(const double * const s, const double * const alph
     }
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dh_da(const double * const s, const double * const alpha, double T,
+void YaguchiGr91FlowRule::dh_da(const double * const s, const double * const alpha, double T,
               double * const dhv) const
 {
   // Fair number of cross-terms are zero
@@ -1188,11 +1126,10 @@ int YaguchiGr91FlowRule::dh_da(const double * const s, const double * const alph
     dhv[CINDEX(13,13,nh)] += -bi;
   }
 
-  return 0;
 }
 
 // Hardening rule wrt to time
-int YaguchiGr91FlowRule::h_time(const double * const s, 
+void YaguchiGr91FlowRule::h_time(const double * const s, 
                                 const double * const alpha, double T,
                                 double * const hv) const
 {
@@ -1214,19 +1151,17 @@ int YaguchiGr91FlowRule::h_time(const double * const s,
     hv[i+6] = -g2i * pow(J2, mi-1.0) * alpha[i+6];
   }
 
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dh_ds_time(const double * const s, 
+void YaguchiGr91FlowRule::dh_ds_time(const double * const s, 
                                     const double * const alpha, double T,
                                     double * const dhv) const
 {
   // This is actually still zero
   std::fill(dhv, dhv+(nhist()*6), 0.0);
-  return 0;
 }
 
-int YaguchiGr91FlowRule::dh_da_time(const double * const s, 
+void YaguchiGr91FlowRule::dh_da_time(const double * const s, 
                                     const double * const alpha, double T,
                                     double * const dhv) const
 {
@@ -1283,8 +1218,6 @@ int YaguchiGr91FlowRule::dh_da_time(const double * const s,
       dhv[CINDEX((i+6),(j+6),nh)] = -g2i * dX2[CINDEX(i,j,6)];
     }
   }
-
-  return 0;
 }
 
 

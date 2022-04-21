@@ -16,20 +16,18 @@ ScalarCreepRule::ScalarCreepRule(ParameterSet & params) :
 }
 
 // Scalar creep default derivatives for time and temperature
-int ScalarCreepRule::dg_dt(double seq, double eeq, double t, double T,
+void ScalarCreepRule::dg_dt(double seq, double eeq, double t, double T,
                            double & dg) const
 {
   dg = 0.0;
 
-  return 0;
 }
 
-int ScalarCreepRule::dg_dT(double seq, double eeq, double t, double T,
+void ScalarCreepRule::dg_dT(double seq, double eeq, double t, double T,
                            double & dg) const
 {
   dg = 0.0;
 
-  return 0;
 }
 
 // Implementation of power law creep
@@ -62,24 +60,21 @@ std::unique_ptr<NEMLObject> PowerLawCreep::initialize(ParameterSet & params)
 }
 
 
-int PowerLawCreep::g(double seq, double eeq, double t, double T, double & g) const
+void PowerLawCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   g = A_->value(T) * pow(seq, n_->value(T));
-  return 0;
 }
 
-int PowerLawCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void PowerLawCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   double nv = n_->value(T);
 
   dg = A_->value(T) * nv * pow(seq, nv - 1.0);
-  return 0;
 }
 
-int PowerLawCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void PowerLawCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
 double PowerLawCreep::A(double T) const
@@ -122,25 +117,22 @@ std::unique_ptr<NEMLObject> NormalizedPowerLawCreep::initialize(ParameterSet & p
 }
 
 
-int NormalizedPowerLawCreep::g(double seq, double eeq, double t, double T, double & g) const
+void NormalizedPowerLawCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   g = pow(seq / s0_->value(T), n_->value(T));
-  return 0;
 }
 
-int NormalizedPowerLawCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void NormalizedPowerLawCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   double nv = n_->value(T);
   double s0v = s0_->value(T);
 
   dg = nv / s0v * pow(seq / s0v, nv - 1.0);
-  return 0;
 }
 
-int NormalizedPowerLawCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void NormalizedPowerLawCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
 // Implementation of the Blackburn minimum creep rate equation
@@ -179,7 +171,7 @@ std::unique_ptr<NEMLObject> BlackburnMinimumCreep::initialize(ParameterSet & par
 }
 
 
-int BlackburnMinimumCreep::g(double seq, double eeq, double t, double T, double & g) const
+void BlackburnMinimumCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   double A = A_->value(T);
   double n = n_->value(T);
@@ -187,10 +179,9 @@ int BlackburnMinimumCreep::g(double seq, double eeq, double t, double T, double 
 
   g = A * pow(sinh(beta * seq / n), n) * exp(-Q_ / (R_ * T));
 
-  return 0;
 }
 
-int BlackburnMinimumCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void BlackburnMinimumCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   double A = A_->value(T);
   double n = n_->value(T);
@@ -199,23 +190,20 @@ int BlackburnMinimumCreep::dg_ds(double seq, double eeq, double t, double T, dou
   dg = A * beta * exp(-Q_ / (R_ * T)) * cosh(beta * seq / n) * 
       pow(sinh(beta * seq / n), n - 1.0);
 
-  return 0;
 }
 
-int BlackburnMinimumCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void BlackburnMinimumCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
-int BlackburnMinimumCreep::dg_dT(double seq, double eeq, double t, double T, double & dg) const
+void BlackburnMinimumCreep::dg_dT(double seq, double eeq, double t, double T, double & dg) const
 {
   double A = A_->value(T);
   double n = n_->value(T);
   double beta = beta_->value(T);
 
   dg = A * pow(sinh(beta * seq / n), n) * exp(-Q_ / (R_ * T)) * Q_ / (R_ * T * T);
-  return 0;
 }
 
 // Implementation of the Swindeman minimum creep rate equation
@@ -255,32 +243,28 @@ std::unique_ptr<NEMLObject> SwindemanMinimumCreep::initialize(ParameterSet & par
 }
 
 
-int SwindemanMinimumCreep::g(double seq, double eeq, double t, double T, double & g) const
+void SwindemanMinimumCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   g = C_ * pow(seq, n_) * exp(V_ * seq) * exp(-Q_/(T+shift_));
 
-  return 0;
 }
 
-int SwindemanMinimumCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void SwindemanMinimumCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
 
   dg = C_ * exp(-Q_/(T+shift_)) * (n_ + seq * V_) * exp(seq * V_) * pow(seq, n_ - 1.0);
 
-  return 0;
 }
 
-int SwindemanMinimumCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void SwindemanMinimumCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
-int SwindemanMinimumCreep::dg_dT(double seq, double eeq, double t, double T, double & dg) const
+void SwindemanMinimumCreep::dg_dT(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = C_ * pow(seq, n_) * exp(V_ * seq) * exp(-Q_/(T+shift_)) * Q_ /
       ((T+shift_) * (T+shift_)); 
-  return 0;
 }
 
 // Implementation of the mechanism switching model
@@ -326,7 +310,7 @@ std::unique_ptr<NEMLObject> RegionKMCreep::initialize(ParameterSet & params)
   return neml::make_unique<RegionKMCreep>(params); 
 }
 
-int RegionKMCreep::g(double seq, double eeq, double t, double T, double & g) const
+void RegionKMCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   double A, B;
   select_region_(seq, T, A, B);
@@ -335,10 +319,9 @@ int RegionKMCreep::g(double seq, double eeq, double t, double T, double & g) con
 
   g = eps0_ * exp(C1*B) * pow(seq / G, C1 * A);
 
-  return 0;
 }
 
-int RegionKMCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void RegionKMCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   double A, B;
   select_region_(seq, T, A, B);
@@ -347,13 +330,11 @@ int RegionKMCreep::dg_ds(double seq, double eeq, double t, double T, double & dg
   
   dg = eps0_ * exp(C1*B) * C1 * A / G * pow(seq / G, C1 * A - 1.0);
 
-  return 0;
 }
 
-int RegionKMCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void RegionKMCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
 void RegionKMCreep::select_region_(double seq, double T, double & Ai, double & Bi) const
@@ -417,7 +398,7 @@ std::unique_ptr<NEMLObject> NortonBaileyCreep::initialize(ParameterSet & params)
   return neml::make_unique<NortonBaileyCreep>(params); 
 }
 
-int NortonBaileyCreep::g(double seq, double eeq, double t, double T, double & g) const
+void NortonBaileyCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   double A = A_->value(T);
   double m = m_->value(T);
@@ -433,10 +414,9 @@ int NortonBaileyCreep::g(double seq, double eeq, double t, double T, double & g)
 
   g = m * pow(A, 1.0 / m) * pow(seq, n / m) * pow(eeq, (m - 1.0) / m); 
 
-  return 0;
 }
 
-int NortonBaileyCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void NortonBaileyCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   double A = A_->value(T);
   double m = m_->value(T);
@@ -452,10 +432,9 @@ int NortonBaileyCreep::dg_ds(double seq, double eeq, double t, double T, double 
 
   dg = n * pow(A, 1.0 / m) * pow(seq, n / m - 1.0) * pow(eeq, (m - 1.0) / m);
 
-  return 0;
 }
 
-int NortonBaileyCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void NortonBaileyCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   double A = A_->value(T);
   double m = m_->value(T);
@@ -471,7 +450,6 @@ int NortonBaileyCreep::dg_de(double seq, double eeq, double t, double T, double 
 
   dg = (m - 1) * pow(A, 1.0 / m) * pow(seq, n / m) * pow(eeq, -1.0 / m);
 
-  return 0;
 }
 
 double NortonBaileyCreep::A(double T) const
@@ -530,29 +508,26 @@ std::unique_ptr<NEMLObject> MukherjeeCreep::initialize(ParameterSet & params)
   return neml::make_unique<MukherjeeCreep>(params); 
 }
 
-int MukherjeeCreep::g(double seq, double eeq, double t, double T, 
+void MukherjeeCreep::g(double seq, double eeq, double t, double T, 
                       double & g) const
 {
   double mu = emodel_->G(T);
   double Dv = D0_ * exp(-Q_ / (R_ * T));
   g = A_ * Dv * mu * b_ / (k_ * T) * pow(seq / mu, n_);
-  return 0;
 }
 
-int MukherjeeCreep::dg_ds(double seq, double eeq, double t, double T,
+void MukherjeeCreep::dg_ds(double seq, double eeq, double t, double T,
                           double & dg) const
 {
   double mu = emodel_->G(T);
   double Dv = D0_ * exp(-Q_ / (R_ * T));
   dg = n_ * A_ * Dv * mu * b_ / (k_ * T) * pow(seq / mu, n_ - 1.0) / mu;
-  return 0;
 }
 
-int MukherjeeCreep::dg_de(double seq, double eeq, double t, double T,
+void MukherjeeCreep::dg_de(double seq, double eeq, double t, double T,
                           double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
 double MukherjeeCreep::A() const
@@ -616,13 +591,12 @@ ParameterSet GenericCreep::parameters()
   return pset;
 }
 
-int GenericCreep::g(double seq, double eeq, double t, double T, double & g) const
+void GenericCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   g = exp(cfn_->value(log(seq)));
-  return 0;
 }
 
-int GenericCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void GenericCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   double f = cfn_->value(log(seq));
   double df = cfn_->derivative(log(seq));
@@ -633,13 +607,11 @@ int GenericCreep::dg_ds(double seq, double eeq, double t, double T, double & dg)
   else {
     dg = 0.0;
   }
-  return 0;
 }
 
-int GenericCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void GenericCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
 // Setup for solve
@@ -655,24 +627,22 @@ CreepModel::CreepModel(ParameterSet & params) :
 }
 
 // Creep model default derivatives for time and temperature
-int CreepModel::df_dt(const double * const s, const double * const e, double t,
+void CreepModel::df_dt(const double * const s, const double * const e, double t,
                       double T, double * const df) const
 {
   std::fill(df, df+6, 0.0);
 
-  return 0;
 }
 
-int CreepModel::df_dT(const double * const s, const double * const e, double t,
+void CreepModel::df_dT(const double * const s, const double * const e, double t,
                       double T, double * const df) const
 {
   std::fill(df, df+6, 0.0);
 
-  return 0;
 }
 
 // Implementation of creep model update
-int CreepModel::update(const double * const s_np1, 
+void CreepModel::update(const double * const s_np1, 
                        double * const e_np1, const double * const e_n,
                        double T_np1, double T_n,
                        double t_np1, double t_n,
@@ -680,23 +650,21 @@ int CreepModel::update(const double * const s_np1,
 {
   // Setup the trial state
   CreepModelTrialState ts;
-  int ier = make_trial_state(s_np1, e_n, T_np1, T_n, t_np1, t_n, ts);
-  if (ier != SUCCESS) return ier;
+  make_trial_state(s_np1, e_n, T_np1, T_n, t_np1, t_n, ts);
 
   // Solve for the new creep strain
   std::vector<double> xv(nparams());
   double * x = &xv[0];
-  ier = solve(this, x, &ts, {rtol_, atol_, miter_, verbose_, linesearch_});
-  if (ier != SUCCESS) return ier;
+  solve(this, x, &ts, {rtol_, atol_, miter_, verbose_, linesearch_});
   
   // Extract
   std::copy(x, x+6, e_np1);
 
   // Get the tangent
-  return calc_tangent_(e_np1, ts, A_np1);
+  calc_tangent_(e_np1, ts, A_np1);
 }
 
-int CreepModel::make_trial_state(const double * const s_np1, 
+void CreepModel::make_trial_state(const double * const s_np1, 
                                  const double * const e_n,
                                  double T_np1, double T_n,
                                  double t_np1, double t_n,
@@ -707,8 +675,6 @@ int CreepModel::make_trial_state(const double * const s_np1,
   ts.t = t_np1;
   std::copy(e_n, e_n+6, ts.e_n);
   std::copy(s_np1, s_np1+6, ts.s_np1);
-  
-  return 0;
 }
 
 // Implement the solve
@@ -717,57 +683,45 @@ size_t CreepModel::nparams() const
   return 6; // the creep strain
 }
 
-int CreepModel::init_x(double * const x, TrialState * ts)
+void CreepModel::init_x(double * const x, TrialState * ts)
 {
   CreepModelTrialState * tss = static_cast<CreepModelTrialState *>(ts);
 
   // Just make it the previous value
   std::copy(tss->e_n, tss->e_n+6, x);
-  return 0;
 }
 
-int CreepModel::RJ(const double * const x, TrialState * ts, 
+void CreepModel::RJ(const double * const x, TrialState * ts, 
                      double * const R, double * const J)
 {
   CreepModelTrialState * tss = static_cast<CreepModelTrialState *>(ts);
   
   // Residual
-  int ier = f(tss->s_np1, x, tss->t, tss->T, R);
-  if (ier != SUCCESS) return ier;
+  f(tss->s_np1, x, tss->t, tss->T, R);
   for (int i=0; i<6; i++) R[i] = x[i] - tss->e_n[i] - R[i] * tss->dt;
 
   // Jacobian
-  ier = df_de(tss->s_np1, x, tss->t, tss->T, J);
-  if (ier != SUCCESS) return ier;
+  df_de(tss->s_np1, x, tss->t, tss->T, J);
   for (int i=0; i<36; i++) J[i] = -J[i] * tss->dt;
   for (int i=0; i<6; i++) J[CINDEX(i,i,6)] += 1.0;
-
-  return 0;
 }
 
 // Helper for tangent
-int CreepModel::calc_tangent_(const double * const e_np1, 
+void CreepModel::calc_tangent_(const double * const e_np1, 
                               CreepModelTrialState & ts, double * const A_np1)
 {
-  int ier;
   double R[6];
   double J[36];
 
-  ier = RJ(e_np1, &ts, R, J);
-  if (ier != SUCCESS) return ier;
-
-  ier = invert_mat(J, 6);
-  if (ier != SUCCESS) return ier;
+  RJ(e_np1, &ts, R, J);
+  invert_mat(J, 6);
 
   for (int i=0; i<36; i++) J[i] = J[i] * ts.dt;
 
   double B[36];
-  ier = df_ds(ts.s_np1, e_np1, ts.t, ts.T, B);
-  if (ier != SUCCESS) return ier;
+  df_ds(ts.s_np1, e_np1, ts.t, ts.T, B);
 
   mat_mat(6, 6, 6, J, B, A_np1);
-
-  return 0;
 }
 
 // Implementation of 2.25Cr-1Mo rule
@@ -795,7 +749,7 @@ std::unique_ptr<NEMLObject> MinCreep225Cr1MoCreep::initialize(ParameterSet & par
 }
 
 
-int MinCreep225Cr1MoCreep::g(double seq, double eeq, double t, double T, double & g) const
+void MinCreep225Cr1MoCreep::g(double seq, double eeq, double t, double T, double & g) const
 {
   if (seq < 60.0) {
     g = e1_(seq, T);
@@ -809,10 +763,9 @@ int MinCreep225Cr1MoCreep::g(double seq, double eeq, double t, double T, double 
     }
   }
 
-  return 0;
 }
 
-int MinCreep225Cr1MoCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
+void MinCreep225Cr1MoCreep::dg_ds(double seq, double eeq, double t, double T, double & dg) const
 {
   if (seq < 60.0) {
     dg = de1_(seq, T);
@@ -826,13 +779,11 @@ int MinCreep225Cr1MoCreep::dg_ds(double seq, double eeq, double t, double T, dou
     }
   }
 
-  return 0;
 }
 
-int MinCreep225Cr1MoCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
+void MinCreep225Cr1MoCreep::dg_de(double seq, double eeq, double t, double T, double & dg) const
 {
   dg = 0.0;
-  return 0;
 }
 
 double MinCreep225Cr1MoCreep::e1_(double seq, double T) const
@@ -897,36 +848,29 @@ std::unique_ptr<NEMLObject> J2CreepModel::initialize(ParameterSet & params)
   return neml::make_unique<J2CreepModel>(params); 
 }
 
-int J2CreepModel::f(const double * const s, const double * const e, double t,
+void J2CreepModel::f(const double * const s, const double * const e, double t,
                     double T, double * const f) const
 {
-  int ier = 0;
-
   // Gather the effective stresses
   double se = seq(s);
   double ee = eeq(e);
 
   // Get the direction
   std::copy(s, s+6, f);
-  ier = sdir(f);
-  if (ier != SUCCESS) return ier;
+  sdir(f);
 
   // Get the rate
   double rate;
-  ier = rule_->g(se, ee, t, T, rate);
-  if (ier != SUCCESS) return ier;
+  rule_->g(se, ee, t, T, rate);
 
   // Multiply the two together
   for (int i=0; i<6; i++) f[i] *= 3.0/2.0 * rate;
 
-  return 0;
 }
 
-int J2CreepModel::df_ds(const double * const s, const double * const e, 
+void J2CreepModel::df_ds(const double * const s, const double * const e, 
                         double t, double T, double * const df) const
 {
-  int ier = 0;
-
   // Gather the effective stresses
   double se = seq(s);
   double ee = eeq(e);
@@ -934,17 +878,15 @@ int J2CreepModel::df_ds(const double * const s, const double * const e,
   // Get the direction
   double dir[6];
   std::copy(s, s+6, dir);
-  ier = sdir(dir);
+  sdir(dir);
 
   // Get the rate
   double rate;
-  ier = rule_->g(se, ee, t, T, rate);
-  if (ier != SUCCESS) return ier;
+  rule_->g(se, ee, t, T, rate);
 
   // Get the rate derivative
   double drate;
-  ier = rule_->dg_ds(se, ee, t, T, drate);
-  if (ier != SUCCESS) return ier;
+  rule_->dg_ds(se, ee, t, T, drate);
 
   // Get our usual funny identity tensor
   double ID[36];
@@ -967,21 +909,18 @@ int J2CreepModel::df_ds(const double * const s, const double * const e,
   }
 
   double A[36];
-  ier = outer_vec(dir, 6, dir, 6, A);
+  outer_vec(dir, 6, dir, 6, A);
   for (int i=0; i<36; i++) A[i] *= 3.0/2.0 * (drate - rate / se);
   for (int i=0; i<6; i++) A[CINDEX(i,i,6)] += rate / se;
   
   // Do the final multiplication
   mat_mat(6, 6, 6, A, ID, df);
 
-  return 0;
 }
 
-int J2CreepModel::df_de(const double * const s, const double * const e, double t, double T, 
+void J2CreepModel::df_de(const double * const s, const double * const e, double t, double T, 
               double * const df) const
 {
-  int ier = 0;
-
   // Gather the effective stresses
   double se = seq(s);
   double ee = eeq(e);
@@ -989,78 +928,63 @@ int J2CreepModel::df_de(const double * const s, const double * const e, double t
   // Get the stress direction
   double s_dir[6];
   std::copy(s, s+6, s_dir);
-  ier = sdir(s_dir);
-  if (ier != SUCCESS) return ier;
+  sdir(s_dir);
 
   // Get the strain direction
   double e_dir[6];
   std::copy(e, e+6, e_dir);
-  ier = edir(e_dir);
-  if (ier != SUCCESS) return ier;
+  edir(e_dir);
 
   // Get the derivative
   double drate;
-  ier = rule_->dg_de(se, ee, t, T, drate);
-  if (ier != SUCCESS) return ier;
+  rule_->dg_de(se, ee, t, T, drate);
 
   // Tack onto the direction
   for (int i=0; i<6; i++) e_dir[i] *= drate;
 
   // Form the final outer product
-  ier = outer_vec(s_dir, 6, e_dir, 6, df);
-  if (ier != SUCCESS) return ier;
+  outer_vec(s_dir, 6, e_dir, 6, df);
 
-  return 0;
 }
 
-int J2CreepModel::df_dt(const double * const s, const double * const e, 
+void J2CreepModel::df_dt(const double * const s, const double * const e, 
                         double t, double T, double * const df) const 
 {
-  int ier = 0;
-
   // Gather the effective quantities
   double se = seq(s);
   double ee = eeq(e);
   
   // Get the stress direction
   std::copy(s, s+6, df);
-  ier = sdir(df);
-  if (ier != SUCCESS) return ier;
+  sdir(df);
 
   // Get the derivative
   double drate;
-  ier = rule_->dg_dt(se, ee, t, T, drate);
-  if (ier != SUCCESS) return ier;
+  rule_->dg_dt(se, ee, t, T, drate);
 
   // Multiply
   for (int i=0; i<6; i++) df[i] *= 3.0/2.0 * drate;
   
-  return 0;
 }
 
-int J2CreepModel::df_dT(const double * const s, const double * const e,
+void J2CreepModel::df_dT(const double * const s, const double * const e,
                         double t, double T, double * const df) const
 {
-  int ier = 0;
-
   // Gather the effective quantities
   double se = seq(s);
   double ee = eeq(e);
   
   // Get the stress direction
   std::copy(s, s+6, df);
-  ier = sdir(df);
-  if (ier != SUCCESS) return ier;
+  sdir(df);
 
   // Get the derivative
   double drate;
-  ier = rule_->dg_dT(se, ee, t, T, drate);
-  if (ier != SUCCESS) return ier;
+  rule_->dg_dT(se, ee, t, T, drate);
 
   // Multiply
   for (int i=0; i<6; i++) df[i] *= 3.0/2.0 * drate;
   
-  return 0;
 }
 
 // Helpers for J2 plasticity
@@ -1078,21 +1002,19 @@ double J2CreepModel::eeq(const double * const e) const
   return sqrt(2.0 / 3.0) * norm2_vec(e, 6);
 }
 
-int J2CreepModel::sdir(double * const s) const
+void J2CreepModel::sdir(double * const s) const
 {
-  int ier = 0;
   double se = seq(s);
   if (se < std::numeric_limits<double>::epsilon()) {
     std::fill(s, s+6, 0.0);
   }
   else {  
-    ier = dev_vec(s);
+    dev_vec(s);
     for (int i=0; i<6; i++) s[i] /= se;
   }
-  return ier;
 }
 
-int J2CreepModel::edir(double * const e) const
+void J2CreepModel::edir(double * const e) const
 {
   double ee = eeq(e);
   if (ee < std::numeric_limits<double>::epsilon()) {
@@ -1101,7 +1023,6 @@ int J2CreepModel::edir(double * const e) const
   else {
     for (int i=0; i<6; i++) e[i] /= ee;
   }
-  return 0;
 }
 
 } // namespace neml
