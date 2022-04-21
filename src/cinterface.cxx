@@ -11,7 +11,7 @@ NEMLMODEL * create_nemlmodel(const char * fname, const char * mname, int * ier)
     return umodel.release();
   }
   catch (...) {
-    *ier = neml::UNKNOWN_ERROR;
+    *ier = -1;
     return NULL;
   }
 }
@@ -23,7 +23,7 @@ void destroy_nemlmodel(NEMLMODEL * model, int * ier)
     *ier = 0;
   }
   catch (...) {
-    *ier = neml::UNKNOWN_ERROR;
+    *ier = -1;
   }
 }
 
@@ -42,10 +42,10 @@ void elastic_strains_nemlmodel(NEMLMODEL * model, double * s_np1,
                                double * e_np1, int * ier)
 {
   try {
-    *ier = model->elastic_strains(s_np1, T_np1, h_np1, e_np1);
+     model->elastic_strains(s_np1, T_np1, h_np1, e_np1);
   }
   catch (...) {
-    *ier = neml::UNKNOWN_ERROR;
+    *ier = -1;
   }
 }
 
@@ -62,10 +62,10 @@ int nstore_nemlmodel(NEMLMODEL * model)
 void init_store_nemlmodel(NEMLMODEL * model, double * store, int * ier)
 {
   try {
-    *ier = model->init_store(store);
+    model->init_store(store);
   }
   catch (...) {
-    *ier = neml::UNKNOWN_ERROR;
+    *ier = -1;
   }
 }
 
@@ -80,10 +80,10 @@ void update_sd_nemlmodel(NEMLMODEL * model, double * e_np1, double * e_n,
                          int * ier)
 {
   try {
-    *ier = model->update_sd(e_np1, e_n, T_np1, T_n, t_np1, t_n, s_np1, s_n,
+    model->update_sd(e_np1, e_n, T_np1, T_n, t_np1, t_n, s_np1, s_n,
                             h_np1, h_n, A_np1, *u_np1, u_n, *p_np1, p_n);
   }
   catch (...) {
-    *ier = neml::UNKNOWN_ERROR;
+    *ier = -1;
   }
 }
