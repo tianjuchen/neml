@@ -43,13 +43,31 @@ def cubic_to_hex(A, B, C):
     cf = np.amin(np.abs(indice[np.nonzero(indice)]))
     miller_indice = indice / cf
     print("miller_indice: ", miller_indice)
-    
+
     return (
         int(miller_indice[0]),
         int(miller_indice[1]),
         int(miller_indice[2]),
         int(miller_indice[3]),
     )
+
+
+def clearing_fraction(h, k, i, l):
+
+    # clearing of fractions to lowest integers
+    indice = np.array([h, k, i, l])
+    print("indice: ", indice)
+    cf = np.amin(np.abs(indice[np.nonzero(indice)]))
+    miller_indice = indice / cf
+    print("miller_indice: ", miller_indice)
+
+    return (
+        int(miller_indice[0]),
+        int(miller_indice[1]),
+        int(miller_indice[2]),
+        int(miller_indice[3]),
+    )
+
 
 if __name__ == "__main__":
 
@@ -110,7 +128,10 @@ if __name__ == "__main__":
         # Plots an initial basal pole figure
         h, k, i, l = cubic_to_hex(A, B, C)
         print(h, k, i, l)
-        polefigures.pole_figure_discrete(orientations, [1, 1, -2, 6], lattice)
+        pole_dir = clearing_fraction(h * a, k * a, i * a, l * c)
+        polefigures.pole_figure_discrete(
+            orientations, [pole_dir[0], pole_dir[1], pole_dir[2], pole_dir[3]], lattice
+        )
         plt.title("Initial, <{}{}{}{}>".format(h, k, i, l))
         plt.show()
     else:
