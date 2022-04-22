@@ -29,11 +29,11 @@ def Ti_singlecrystal(verbose = True, PTR = True,
   # temperature levels
   Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1073.0, 1173.0])
   # unit transformer
-  ut = 1.0e9
+  ut = 1.0e-3
 
   # Model
-  a = 2.9511*0.1 # nm
-  c = 4.68433*0.1 # nm
+  a = 2.9511*0.1*ut # nm
+  c = 4.68433*0.1*ut # nm
 
   # Elastic constants in MPa
   C11 = interpolate.PiecewiseLinearInterpolate(
@@ -125,7 +125,7 @@ def Ti_singlecrystal(verbose = True, PTR = True,
 
   mu = np.array([mu_slip]*12+[mu_twin]*12)
 
-  k1 = np.array([1.0]*3+[0.25]*3+[5.0]*6)
+  k1 = np.array([1.0]*3+[0.25]*3+[5.0]*6) / ut
 
   k2_1 = interpolate.PiecewiseLinearInterpolate(
       list(Ts),
@@ -145,7 +145,7 @@ def Ti_singlecrystal(verbose = True, PTR = True,
 
   # Sets up the slip system strength model (this is what you'll change)
   # strength = slipharden.FixedStrengthHardening(tau0)
-  strength = slipharden.LANLTiModel(tau0, C_st, mu, k1, k2, X_s=0.9)
+  strength = slipharden.LANLTiModel(tau0, C_st, mu, k1, k2, X_s=0.9, inivalue=1.0)
   # strength = slipharden.SimpleLinearHardening(M, tau0)
   # Sets up the slip rule
   slipmodel = sliprules.PowerLawSlipRule(strength, g0, n)

@@ -32,7 +32,7 @@ def make_Ti_polycrystal(N, nthreads):
 
   model = polycrystal.TaylorModel(smodel, orientations, nthreads = nthreads)
 
-  return smodel
+  return model
 #================================================#
 def load_file(path, T, rate):
 #================================================#
@@ -49,17 +49,18 @@ if __name__ == "__main__":
 
   # set up model grains and threads
   Ngrains = 50
-  nthreads = 1
+  nthreads = 20
   # tensile conditions
   rate = "1e-2"
   emax = 0.2
   erate = float(rate)
   Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1073.0, 1173.0])
   
-  path_1 = "/mnt/c/Users/ladmin/Desktop/argonne/RTRC_data_extract/Huang-2007-MSEA/"
-  path_2 = "/mnt/c/Users/ladmin/Desktop/argonne/RTRC_data_extract/Yapici-2014-MD/"
+  path_1 = "/home/tianju.chen/RTRC_data_extract/Huang-2007-MSEA/"
+  path_2 = "/home/tianju.chen/RTRC_data_extract/Yapici-2014-MD/"
 
-  for T in Ts:
+  for T in Ts[-1:]:
+    print(T)
     if T < 1000.0:
       path = path_1
     else:
