@@ -51,26 +51,29 @@ if __name__ == "__main__":
   Ngrains = 50
   nthreads = 20
   # tensile conditions
-  rate = "1e-2"
+  rate = "8.33e-5"
   emax = 0.2
   erate = float(rate)
-  Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1073.0, 1173.0])
+  Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1023.0, 1073.0, 1173.0])
   
-  path_1 = "/home/tianju.chen/RTRC_data_extract/Huang-2007-MSEA/"
-  path_2 = "/home/tianju.chen/RTRC_data_extract/Yapici-2014-MD/"
+  # path_1 = "/home/tianju.chen/RTRC_data_extract/Huang-2007-MSEA/"
+  # path_2 = "/home/tianju.chen/RTRC_data_extract/Yapici-2014-MD/"
 
-  for T in Ts[-1:]:
+  for T in Ts[7:8]:
     print(T)
+    """
     if T < 1000.0:
       path = path_1
     else:
       path = path_2
     df = load_file(path, T, rate)
+    """
     tmodel = make_Ti_polycrystal(Ngrains, nthreads)
     res = drivers.uniaxial_test(tmodel, erate = erate, emax = emax,
                           sdir = np.array([0,0,-1,0,0,0]),
                           T = T, verbose = True, full_results = False)
     # save the stress-strain data for future use
+    """
     data = pd.DataFrame({
       "strain": res['strain'],
       "stress": res['stress']}) 
@@ -87,5 +90,6 @@ if __name__ == "__main__":
     plt.savefig("Engineering-stress-strain-{}.png".format(int(T)))
     plt.show()
     plt.close()    
+    """
   
   

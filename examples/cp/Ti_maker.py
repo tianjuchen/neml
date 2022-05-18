@@ -22,6 +22,15 @@ import tqdm
 import warnings
 warnings.filterwarnings("ignore")
 
+class extrapolate:
+
+  def __init__(self, xs, ys):
+    self.xs = xs
+    self.ys = ys
+
+  def value(self, T):
+    func = np.poly1d(np.polyfit(self.xs, self.ys, deg=1))
+    return func(T).tolist()
 
 def Ti_singlecrystal(verbose = True, PTR = True, 
                      return_hardening = False,
@@ -75,9 +84,13 @@ def Ti_singlecrystal(verbose = True, PTR = True,
   # Reference slip rate and rate sensitivity exponent
   g0 = 1.0
   # if strain rate is 1e-2
-  n = 12.0
+  #n = 12.0
   # if strain rate is 1e-3
-  # n = 7.5
+  #n = 7.5
+  applied_rate = 8.33e-5
+  rates_control = np.array([1e-3, 1e-2])
+  sense_control = np.array([7.5, 12.0])
+  n = extrapolate(rates_control, sense_control).value(applied_rate)
 
   # Twin threshold
   twin_threshold = 0.75
