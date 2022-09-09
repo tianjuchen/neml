@@ -32,7 +32,6 @@ if __name__ == "__main__":
   flow = ri_flow.RateIndependentNonAssociativeHardening(surface, hrule)
   model = models.SmallStrainRateIndependentPlasticity(elastic, flow)
   
-  
   # Uniaxial stress/strain curves at decades of strain rates
   erates = np.logspace(-6,2,9)
   for rate in erates:
