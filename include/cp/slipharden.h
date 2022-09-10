@@ -509,7 +509,7 @@ class NEML_EXPORT LANLTiModel: public SlipHardening
   std::vector<std::shared_ptr<Interpolate>> mu_, k1_, k2_;
   double X_s_;
   double inivalue_;
-  std::string varprefix_, slipprefix_, twinprefix_;
+  std::string varprefix_, twinprefix_, slipprefix_;
   std::vector<std::string> varnames_;
 };
 
