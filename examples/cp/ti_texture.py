@@ -75,12 +75,12 @@ if __name__ == "__main__":
 
     # path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/"
     # orientations = load_texture_input(path)
-
+    
     orientations = [
         rotations.CrystalOrientation(
-            0.0,
-            0.0,
-            -180.0,
+            140.76847951640775,
+            65.9051574478893,
+            26.565051177077986,
             angle_type="degrees",
             convention="kocks",
         )
@@ -89,9 +89,9 @@ if __name__ == "__main__":
     
     orientations_2 = [
         rotations.CrystalOrientation(
-            0.0,
-            0.0,
-            -180.0,
+            140.76847951640775,
+            65.9051574478893,
+            26.565051177077986,
             angle_type="degrees",
             convention="kocks",
         ).flip()
@@ -100,8 +100,8 @@ if __name__ == "__main__":
     print(orientations)
     # orientations = rotations.random_orientations(2)
     # print(orientations)
+    
 
-    # sys.exit("stop")
     # Model
     a = 2.9511 * 0.1  # nm
     c = 4.68433 * 0.1  # nm
@@ -112,6 +112,7 @@ if __name__ == "__main__":
     # Plots an initial basal pole figure
     polefigures.pole_figure_discrete(orientations, [0, 0, 0, 1], lattice)
     plt.title("Initial, <0001>")
+    plt.savefig("Initial_orientation.pdf", dpi=300)
     plt.show()
     plt.close()
 

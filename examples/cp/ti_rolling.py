@@ -24,8 +24,8 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     # Number of crystals and number of threads
-    N = 1000
-    nthreads = 3
+    N = 100
+    nthreads = 1
 
     # Strain direction, rate, and number of steps
     L = np.array([[0.0, 0, 0], [0, 1.0, 0], [0, 0, -1.0]])
@@ -138,7 +138,6 @@ if __name__ == "__main__":
     plt.title("Initial, <0001>")
     plt.show()
     plt.close()
-    sys.exit("stop")
 
     # Sets up the linear elastic tensor
     emodel = elasticity.TransverseIsotropicLinearElasticModel(
@@ -202,13 +201,13 @@ if __name__ == "__main__":
         p_n = p_np1
 
     # Plots a second, as-rolled basal pole figure
-    # print("deformed texture are:", pmodel.orientations(h_np1))
     updated_quats = pmodel.orientations(h_np1)
     updated_euler = [
         q.to_euler(angle_type="degrees", convention="kocks") for q in updated_quats
     ]
-    print("deformed texture are:", updated_euler)
+    
     updated_euler = np.array(updated_euler)
+    
     data = pd.DataFrame(
         {
             "ori_1": updated_euler[:, 0],
@@ -217,7 +216,19 @@ if __name__ == "__main__":
         }
     )
     data.to_csv("history.csv")
+    
 
     polefigures.pole_figure_discrete(pmodel.orientations(h_np1), [0, 0, 0, 1], lattice)
     plt.title("Final, <0001>")
     plt.show()
+    plt.close()
+
+    polefigures.pole_figure_discrete(pmodel.orientations(h_np1), [1, 0, -1, 0], lattice)
+    plt.title("Final, <1010>")
+    plt.show()
+    plt.close()
+
+    polefigures.pole_figure_discrete(pmodel.orientations(h_np1), [1, 0, -1, 1], lattice)
+    plt.title("Final, <1011>")
+    plt.show()
+    plt.close()

@@ -38,8 +38,19 @@ def make_Ti_polycrystal(N, nthreads):
         verbose=True, PTR=True, return_hardening=False, update_rotation=True
     )
 
-    orientations = rotations.random_orientations(N)
-
+    #orientations = rotations.random_orientations(N)
+    
+    orientations = [
+        rotations.CrystalOrientation(
+            0.0,
+            0.0,
+            0.0,
+            angle_type="degrees",
+            convention="kocks",
+        )
+        for _ in range(N)
+    ]
+   
     model = polycrystal.TaylorModel(smodel, orientations, nthreads=nthreads)
 
     return model
@@ -89,27 +100,61 @@ def accumulate_history(start_index, end_index, store_history):
             if i % num_niternal == j:
                 accum_hist_var[j - start_index] += store_history[-1, i]
     return accum_hist_var
-    
+
+
+def deformed_texture(store_history, taylor_model, T):
+
+    # unit transformer
+    ut = 1.0e-3
+
+    # Model
+    a = 2.9511 * 0.1 * ut  # nm
+    c = 4.68433 * 0.1 * ut  # nm
+
+    # Sets up the lattice crystallography
+    lattice = crystallography.HCPLattice(a, c)
+    # Basal <a>
+    lattice.add_slip_system([1, 1, -2, 0], [0, 0, 0, 1])  # direction, plane
+    # Prismatic <a>
+    lattice.add_slip_system([1, 1, -2, 0], [1, 0, -1, 0])
+    # Pyramidal <c+a>
+    lattice.add_slip_system([1, 1, -2, -3], [1, 1, -2, 2])
+    # Tension twinning
+    lattice.add_twin_system([-1, 0, 1, 1], [1, 0, -1, 2], [1, 0, -1, 1], [1, 0, -1, -2])
+    # Compression twinning
+    lattice.add_twin_system(
+        [1, 1, -2, -3], [1, 1, -2, 2], [2, 2, -4, 3], [1, 1, -2, -4]
+    )
+
+    pf = taylor_model.orientations(store_history[-1])
+    polefigures.pole_figure_discrete(pf, [0, 0, 0, 1], lattice)
+    plt.title("Final, <0001>")
+    plt.savefig("deformpf-%i-C-1.pdf" % int(T - 273.15), dpi=300)
+    plt.show()
+    plt.close()
+    return pf
+
+
 if __name__ == "__main__":
 
     # set up model grains and threads
-    Ngrains = 500
+    Ngrains = 1
     nthreads = 20
     # tensile conditions
-    rate = "8.33e-5"
-    emax = 0.2
+    rate = "4.33e5" #"8.33e-5"
+    emax = 2.0 #0.2
     erate = float(rate)
     Ts = np.array(
-        [298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1023.0, 1073.0, 1173.0]
+        [298.0]#, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1023.0, 1073.0, 1173.0]
     )
 
     tmodel = make_Ti_polycrystal(Ngrains, nthreads)
-    c_dir = np.array([-1, 0, 0, 0, 0, 0])
-    t_dir = np.array([1, 0, 0, 0, 0, 0])
+    c_dir = np.array([0, -1, 0, 0, 0, 0])
+    t_dir = np.array([0, 0, -1, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
 
-    full_res = False
+    full_res = True
 
     for T in Ts:
         for l_dir, prefix in zip(dirs, prefixs):
@@ -127,10 +172,12 @@ if __name__ == "__main__":
             full_results = full_res
 
             if full_results:
-
+            
+                pf = deformed_texture(res["history"], tmodel, T)
+                
                 store_history = np.array(res["history"])
                 print("shape of history is:", store_history.shape)
-
+                print(store_history)
                 # calculate internal dislocation density
                 accu_density = accumulate_history(8, 20, store_history)
                 print(accu_density)
@@ -184,7 +231,7 @@ if __name__ == "__main__":
                     "Accumulated Slip Strain",
                     "{}-slip-strain".format(prefix),
                 )
-
+                sys.exit("stop first")
             else:
 
                 data = pd.DataFrame(

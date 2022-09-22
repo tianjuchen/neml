@@ -33,6 +33,11 @@ class extrapolate:
 
 
 if __name__ == "__main__":
+    
+    a = [10.0, 20.0] + 1000.0
+    print(a)
+    sys.exit("stop here")
+
     # Number of crystals and number of threads
     N = 1000
     nthreads = 3
@@ -165,7 +170,7 @@ if __name__ == "__main__":
     # Sets up the lattice crystallography
     lattice = crystallography.HCPLattice(a, c)
     # Basal <a>
-    lattice.add_slip_system([1, 1, -2, 0], [0, 0, 0, 1])
+    lattice.add_slip_system([1, 1, -2, 0], [0, 0, 0, 1]) # direction, plane
     # Prismatic <a>
     lattice.add_slip_system([1, 1, -2, 0], [1, 0, -1, 0])
     # Pyramidal <c+a>
@@ -275,7 +280,17 @@ if __name__ == "__main__":
     # Sets up the poly crystal model
     L *= erate
     dt = emax / steps / erate
-    orientations = rotations.random_orientations(N)
+    orientations = [
+        rotations.CrystalOrientation(
+            0.0,
+            0.0,
+            -180.0,
+            angle_type="degrees",
+            convention="kocks",
+        )
+        for _ in range(N)
+    ]
+    # orientations = rotations.random_orientations(N)
     pmodel = polycrystal.TaylorModel(model, orientations, nthreads=nthreads)
 
     # Runs the exmaple
@@ -314,7 +329,7 @@ if __name__ == "__main__":
         e.append(d_np1[1])
         s.append(s_np1[1])
 
-
+    print("strain:", e[-1])
     # plot stress-strain
     plt.plot(e, s, 'k-', lw=2)
     plt.title("Stress-strain")
@@ -331,17 +346,17 @@ if __name__ == "__main__":
     plt.close()
 
     polefigures.pole_figure_discrete(
-        pmodel.orientations(h_np1), [1, 1, -2, 0], lattice
+        pmodel.orientations(h_np1), [1, 0, 1, 0], lattice
     )
-    plt.title("Final, <11-20>")
+    plt.title("Final, <1010>")
     plt.savefig("deformpf-%i-C-2.png" % int(T - 273.15), dpi=300)
     # plt.show()
     plt.close()
 
     polefigures.pole_figure_discrete(
-        pmodel.orientations(h_np1), [1, 0, -1, 0], lattice
+        pmodel.orientations(h_np1), [1, 0, 1, 1], lattice
     )
-    plt.title("Final, <10-10>")
+    plt.title("Final, <1011>")
     plt.savefig("deformpf-%i-C-3.png" % int(T - 273.15), dpi=300)
     # plt.show()
     plt.close()
