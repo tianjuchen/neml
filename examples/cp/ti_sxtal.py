@@ -149,8 +149,8 @@ if __name__ == "__main__":
     )
 
     tmodel = make_Ti_polycrystal(Ngrains, nthreads)
-    c_dir = np.array([0, -1, 0, 0, 0, 0])
-    t_dir = np.array([0, 0, -1, 0, 0, 0])
+    c_dir = np.array([-1, 0, 0, 0, 0, 0])
+    t_dir = np.array([1, 0, 0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
 

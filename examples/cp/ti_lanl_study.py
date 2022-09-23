@@ -358,6 +358,8 @@ def plot_initial_pf(Q, T, L):
     return plt.close()
 
 
+
+
 if __name__ == "__main__":
 
     path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/try/"
@@ -381,7 +383,7 @@ if __name__ == "__main__":
     full_res = True
     res = drivers.uniaxial_test(
         smodel,
-        erate=erate,
+        erate=erate, 
         emax=emax,
         sdir=t_dir,
         T=T,
