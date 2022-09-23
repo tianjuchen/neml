@@ -47,7 +47,9 @@ class extrapolate:
 
 
 class hcp_model:
-    def __init__(self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax):
+    def __init__(
+        self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax, oripath
+    ):
         self.Q = Q
         self.N = N
         self.threads = threads
@@ -58,6 +60,7 @@ class hcp_model:
         self.tension = t_dir
         self.compression = c_dir
         self.prefix = prefix
+        self.oripath = oripath
 
     def hcp_singlecrystal(
         self, verbose=False, update_rotation=True, PTR=True, return_isv=False
@@ -284,7 +287,7 @@ class hcp_model:
                 kmodel,
                 lattice,
                 update_rotation=update_rotation,
-                postprocessors=[twinner],
+                postprocessors=[],
                 verbose=False,
                 linesearch=True,
                 initial_rotation=self.Q,
@@ -332,9 +335,43 @@ class hcp_model:
         )
         return single_model
 
-    def orientations(self, random=True):
+    def orientations(self, random=False, initial=True):
         if random:
             orientations = rotations.random_orientations(self.N)
+        elif initial:
+            fnames = glob.glob(self.oripath + "*.csv")
+            orientation_angles = np.zeros((500, 3))
+            for f in fnames:
+                file_name = os.path.basename(f).split(".csv")[0]
+                if file_name == "history":
+                    df = pd.read_csv(f)
+                    ori_1 = df["ori_1"]
+                    ori_2 = df["ori_2"]
+                    ori_3 = df["ori_3"]
+
+                    for i, (euler_1, euler_2, euler_3) in enumerate(
+                        zip(ori_1, ori_2, ori_3)
+                    ):
+                        orientation_angles[i, 0] = euler_1
+                        orientation_angles[i, 1] = euler_2
+                        orientation_angles[i, 2] = euler_3
+
+                orientations = np.array(
+                    [
+                        rotations.CrystalOrientation(
+                            texture_1,
+                            texture_2,
+                            texture_3,
+                            angle_type="degrees",
+                            convention="kocks",
+                        )
+                        for texture_1, texture_2, texture_3 in zip(
+                            orientation_angles[:, 0],
+                            orientation_angles[:, 1],
+                            orientation_angles[:, 2],
+                        )
+                    ]
+                )
         else:
             orientations = [self.Q for _ in range(self.N)]
 
@@ -815,6 +852,7 @@ class hcp_model:
 if __name__ == "__main__":
 
     path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/try/"
+    texture_path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/"
     Q = rotations.CrystalOrientation(
         0.0, 0.0, 0.0, angle_type="degrees", convention="kocks"
     )
@@ -822,11 +860,11 @@ if __name__ == "__main__":
     t_dir = np.array([0, 1.0, -1.0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
-    N, nthreads = 1000, 10
+    N, nthreads = 500, 1
     T = 298.0
-    erate, emax = 8.33e-5, np.log(1+0.5)
+    erate, emax = 8.33e-5, np.log(1 + 0.5)
     hcp_model = hcp_model(
-        Q, N, nthreads, T, path, t_dir, c_dir, prefixs[0], erate, emax
+        Q, N, nthreads, T, path, t_dir, c_dir, prefixs[0], erate, emax, texture_path
     )
 
     res = hcp_model.driver()
