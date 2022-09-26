@@ -72,7 +72,7 @@ void PTRTwinReorientation::act(SingleCrystalModel & model,
                                const History & prev_state)
 {
   // If "not twinned"
-  if (prev_state.get<double>("twinned") < 0.5) {
+  if (prev_state.get<double>("twinned") < 0.50) {
     state.get<double>("twinned") = prev_state.get<double>("twinned");
     size_t j = 0;
     for (size_t g = 0; g < L.ngroup(); g++) {
@@ -84,7 +84,7 @@ void PTRTwinReorientation::act(SingleCrystalModel & model,
               L.characteristic_shear(g,i);
           // If over the threshold do stuff
           if ((state.get<double>("twin_fraction"+std::to_string(j)) >
-              threshold_->value(T)) && (state.get<double>("twinned") < 0.5)) {
+              threshold_->value(T)) && (state.get<double>("twinned") < 0.50)) {
             Orientation twinned = L.reorientation(g,i) * 
                 model.get_active_orientation(state);
             model.set_active_orientation(state, twinned);
@@ -95,7 +95,7 @@ void PTRTwinReorientation::act(SingleCrystalModel & model,
       }
     }
     // Remove accumulated twin slip
-    if (state.get<double>("twinned") > 0.5) {
+    if (state.get<double>("twinned") > 0.50) {
       j = 0;
       for (size_t g = 0; g < L.ngroup(); g++) {
         for (size_t i = 0; i < L.nslip(g); i++) {
