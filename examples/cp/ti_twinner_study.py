@@ -67,7 +67,9 @@ class hcp_model:
     ):
 
         # Constant part of the strength for slip and twin
-        tau0 = np.array([200.0]*3+[120.0]*3+[230.0]*6+[200.0]*6+[250.0]*6)
+        tau0 = np.array(
+            [200.0] * 3 + [120.0] * 3 + [230.0] * 6 + [200.0] * 6 + [250.0] * 6
+        )
 
         # Model
         a = 2.9511 * 0.1  # nm
@@ -698,7 +700,7 @@ if __name__ == "__main__":
     res = hcp_model.driver()
     hcp_model.plot_initial_pf(display=True, savefile=False)
     hcp_model.deformed_texture(res, display=False, savefile=True)
-    hcp_model.save_texture(res)
-    hcp_model.rss_history(res, display=False, savefile=True)
-    hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
-    hcp_model.save_evolve_isv_dataframe(res)
+    # hcp_model.save_texture(res)
+    # hcp_model.rss_history(res, display=False, savefile=True)
+    # hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
+    # hcp_model.save_evolve_isv_dataframe(res)

@@ -399,7 +399,7 @@ class hcp_model:
         return plt.close()
 
     def driver(self, full_res=True, use_taylor=True):
-        
+
         if use_taylor:
             res = drivers.uniaxial_test(
                 self.taylor_model(),
@@ -419,8 +419,8 @@ class hcp_model:
                 T=self.T,
                 verbose=True,
                 full_results=full_res,
-            )            
-        return 
+            )
+        return
 
     def usym(self, v):
         """
@@ -875,7 +875,7 @@ if __name__ == "__main__":
     res = hcp_model.driver(use_taylor=True)
     hcp_model.plot_initial_pf(display=True, savefile=False)
     hcp_model.deformed_texture(res, display=True, savefile=False)
-    # hcp_model.rss_history(res, display=False, savefile=True)
-    # hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
-    # hcp_model.save_evolve_isv_dataframe(res)
-    # hcp_model.save_texture(res)
+    hcp_model.rss_history(res, display=False, savefile=True)
+    hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
+    hcp_model.save_evolve_isv_dataframe(res)
+    hcp_model.save_texture(res)
