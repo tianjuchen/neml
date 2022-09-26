@@ -994,9 +994,9 @@ ParameterSet LANLTiModel::parameters()
   pset.add_optional_parameter<std::string>("varprefix", 
                                            std::string("rho"));
   pset.add_optional_parameter<std::string>("twinprefix", 
-                                           std::string("twin"));
-  pset.add_optional_parameter<std::string>("slipprefix", 
                                            std::string("slip"));
+  pset.add_optional_parameter<std::string>("slipprefix", 
+                                           std::string("pslip"));
 
   return pset;
 }

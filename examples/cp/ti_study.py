@@ -180,7 +180,7 @@ class hcp_model:
         n = extrapolate(rates_control, sense_control).value(applied_rate)
 
         # Twin threshold
-        twin_threshold = 0.75
+        twin_threshold = 0.05
 
         # Sets up the lattice crystallography
         lattice = crystallography.HCPLattice(a, c)
@@ -287,7 +287,7 @@ class hcp_model:
                 kmodel,
                 lattice,
                 update_rotation=update_rotation,
-                postprocessors=[],
+                postprocessors=[twinner],
                 verbose=False,
                 linesearch=True,
                 initial_rotation=self.Q,
@@ -299,6 +299,7 @@ class hcp_model:
                 kmodel,
                 lattice,
                 update_rotation=update_rotation,
+                postprocessors=[],
                 verbose=False,
                 linesearch=True,
                 initial_rotation=self.Q,
@@ -335,7 +336,7 @@ class hcp_model:
         )
         return single_model
 
-    def orientations(self, random=False, initial=True):
+    def orientations(self, random=True, initial=False):
         if random:
             orientations = rotations.random_orientations(self.N)
         elif initial:
@@ -397,17 +398,29 @@ class hcp_model:
             plt.show()
         return plt.close()
 
-    def driver(self, full_res=True):
-        res = drivers.uniaxial_test(
-            self.taylor_model(),
-            erate=self.erate,
-            emax=self.emax,
-            sdir=self.tension,
-            T=self.T,
-            verbose=True,
-            full_results=full_res,
-        )
-        return res
+    def driver(self, full_res=True, use_taylor=True):
+        
+        if use_taylor:
+            res = drivers.uniaxial_test(
+                self.taylor_model(),
+                erate=self.erate,
+                emax=self.emax,
+                sdir=self.tension,
+                T=self.T,
+                verbose=True,
+                full_results=full_res,
+            )
+        else:
+            res = drivers.uniaxial_test(
+                self.sxtal_model(),
+                erate=self.erate,
+                emax=self.emax,
+                sdir=self.tension,
+                T=self.T,
+                verbose=True,
+                full_results=full_res,
+            )            
+        return 
 
     def usym(self, v):
         """
@@ -782,14 +795,6 @@ class hcp_model:
             y=tensors.Vector([0, 1.0, 0]),
             axis_labels=["X", "Y"],
         )
-        polefigures.pole_figure_discrete(
-            pf.flip(),
-            [0, 0, 0, 1],
-            lattice=self.Lattice(),
-            x=tensors.Vector([1.0, 0, 0]),
-            y=tensors.Vector([0, 1.0, 0]),
-            axis_labels=["X", "Y"],
-        )
         plt.title("Final, <0001>")
         if savefile:
             plt.savefig(
@@ -800,7 +805,7 @@ class hcp_model:
         plt.close()
 
         polefigures.pole_figure_discrete(pf, [1, 0, -1, 0], lattice=self.Lattice())
-        plt.title("Final, <1010>")
+        plt.title("Final, <10-10>")
         if savefile:
             plt.savefig(
                 self.path + "deformpf-%i-C-2.pdf" % int(self.T - 273.15), dpi=300
@@ -810,7 +815,7 @@ class hcp_model:
         plt.close()
 
         polefigures.pole_figure_discrete(pf, [1, 1, -2, 0], lattice=self.Lattice())
-        plt.title("Final, <1120>")
+        plt.title("Final, <11-20>")
         if savefile:
             plt.savefig(
                 self.path + "deformpf-%i-C-3.pdf" % int(self.T - 273.15), dpi=300
@@ -820,7 +825,7 @@ class hcp_model:
         plt.close()
 
         polefigures.pole_figure_discrete(pf, [1, 0, -1, 1], lattice=self.Lattice())
-        plt.title("Final, <1011>")
+        plt.title("Final, <10-11>")
         if savefile:
             plt.savefig(
                 self.path + "deformpf-%i-C-4.pdf" % int(self.T - 273.15), dpi=300
@@ -851,7 +856,7 @@ class hcp_model:
 
 if __name__ == "__main__":
 
-    path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/try/"
+    path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/twinner/"
     texture_path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/"
     Q = rotations.CrystalOrientation(
         0.0, 0.0, 0.0, angle_type="degrees", convention="kocks"
@@ -860,17 +865,17 @@ if __name__ == "__main__":
     t_dir = np.array([0, 1.0, -1.0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
-    N, nthreads = 500, 1
+    N, nthreads = 1, 1
     T = 298.0
     erate, emax = 8.33e-5, np.log(1 + 0.5)
     hcp_model = hcp_model(
         Q, N, nthreads, T, path, t_dir, c_dir, prefixs[0], erate, emax, texture_path
     )
 
-    res = hcp_model.driver()
-    hcp_model.plot_initial_pf(display=False, savefile=True)
-    hcp_model.deformed_texture(res, display=False, savefile=True)
-    hcp_model.rss_history(res, display=False, savefile=True)
-    hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
-    hcp_model.save_evolve_isv_dataframe(res)
-    hcp_model.save_texture(res)
+    res = hcp_model.driver(use_taylor=True)
+    hcp_model.plot_initial_pf(display=True, savefile=False)
+    hcp_model.deformed_texture(res, display=True, savefile=False)
+    # hcp_model.rss_history(res, display=False, savefile=True)
+    # hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
+    # hcp_model.save_evolve_isv_dataframe(res)
+    # hcp_model.save_texture(res)
