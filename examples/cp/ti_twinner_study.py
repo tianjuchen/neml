@@ -120,7 +120,7 @@ class hcp_model:
                 kmodel,
                 lattice,
                 update_rotation=update_rotation,
-                postprocessors=[],
+                postprocessors=[twinner],
                 verbose=False,
                 linesearch=True,
                 initial_rotation=self.Q,
