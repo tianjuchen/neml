@@ -420,7 +420,8 @@ class hcp_model:
                 verbose=True,
                 full_results=full_res,
             )
-        return
+
+        return res
 
     def usym(self, v):
         """
@@ -472,11 +473,11 @@ class hcp_model:
                     )
                     if lattice.flat(g, j) < 12:
                         direct_from_model[i, lattice.flat(g, j)] = hist.get_scalar(
-                            "slip" + str(lattice.flat(g, j) + 24)
+                            "pslip" + str(lattice.flat(g, j) + 24)
                         )
                     else:
                         direct_from_model[i, lattice.flat(g, j)] = hist.get_scalar(
-                            "twin" + str(lattice.flat(g, j))
+                            "slip" + str(lattice.flat(g, j))
                         )
                     taus_from_model[
                         i, lattice.flat(g, j)
