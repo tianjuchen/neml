@@ -618,7 +618,7 @@ class hcp_model:
         print("plotting accumulated slip strain evolution")
         print("")
         _ = self.history_plot(
-            integrated_ourselves[-1, :12],
+            integrated_ourselves[-1, :12] / self.N,
             "Slip System",
             "Accumulated Slip Strain",
             "slip-strain",
@@ -631,7 +631,7 @@ class hcp_model:
         print("plotting accumulated twin strain evolution")
         print("")
         _ = self.history_plot(
-            integrated_ourselves[-1, 12:],
+            integrated_ourselves[-1, 12:] / self.N,
             "Twin System",
             "Accumulated Twin Strain",
             "twin-strain",
@@ -644,7 +644,7 @@ class hcp_model:
         print("plotting accumulated hardening evolution")
         print("")
         _ = self.history_plot(
-            taus_from_model[-1, :],
+            taus_from_model[-1, :] / self.N,
             "slip/twin System",
             "hardening",
             "hardening-evolution",
@@ -698,7 +698,7 @@ class hcp_model:
 
         # plot distribution of dislocation density
         _ = self.history_plot(
-            accu_density**2 * 1.0e12,
+            accu_density**2 * 1.0e12 / self.N,
             "Slip System",
             "Accumulated Dislocation Density",
             "{}-dislocation-density".format(self.prefix),
@@ -708,7 +708,7 @@ class hcp_model:
 
         # plot distribution of accumulated twin strain
         _ = self.history_plot(
-            accu_twin,
+            accu_twin / self.N,
             "Twin System",
             "Accumulated Twin Strain",
             "{}-twin-strain".format(self.prefix),
@@ -718,7 +718,7 @@ class hcp_model:
 
         # plot distribution of accumulated slip strain
         _ = self.history_plot(
-            accu_slip,
+            accu_slip / self.N,
             "Slip System",
             "Accumulated Slip Strain",
             "{}-slip-strain".format(self.prefix),
@@ -728,9 +728,9 @@ class hcp_model:
 
         data = pd.DataFrame(
             {
-                "dis_density": accu_density**2 * 1.0e12,
-                "accu_twin": accu_twin,
-                "accu_slip": accu_slip,
+                "dis_density": accu_density**2 * 1.0e12 / self.N,
+                "accu_twin": accu_twin / self.N,
+                "accu_slip": accu_slip / self.N,
             }
         )
 
@@ -891,6 +891,8 @@ if __name__ == "__main__":
             crit_twinner,
         )
         res = lanlti_model.driver(use_taylor=True)
+        print("shape of history: ", np.array(res["history"]).shape)
+        sys.exit("stop here")
         lanlti_model.plot_initial_pf(display=False, savefile=True)
         lanlti_model.deformed_texture(res, display=False, savefile=True)
         lanlti_model.rss_history(res, display=False, savefile=True)
