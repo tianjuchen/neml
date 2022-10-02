@@ -48,7 +48,7 @@ class extrapolate:
 
 class hcp_model:
     def __init__(
-        self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax, oripath
+        self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax, oripath, ctwin
     ):
         self.Q = Q
         self.N = N
@@ -61,6 +61,7 @@ class hcp_model:
         self.compression = c_dir
         self.prefix = prefix
         self.oripath = oripath
+        self.ctwin = ctwin
 
     def hcp_singlecrystal(
         self, verbose=False, update_rotation=True, PTR=True, return_isv=False
@@ -180,7 +181,7 @@ class hcp_model:
         n = extrapolate(rates_control, sense_control).value(applied_rate)
 
         # Twin threshold
-        twin_threshold = 0.05
+        twin_threshold = self.ctwin
 
         # Sets up the lattice crystallography
         lattice = crystallography.HCPLattice(a, c)
@@ -863,20 +864,36 @@ if __name__ == "__main__":
         0.0, 0.0, 0.0, angle_type="degrees", convention="kocks"
     )
     c_dir = np.array([-1, 0, 0, 0, 0, 0])
-    t_dir = np.array([0, 1.0, -1.0, 0, 0, 0])
+    t_dir = np.array([1, 0, 0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
     N, nthreads = 1, 1
-    T = 298.0
+    Ts = np.array([298, 773, 873, 1023, 1173])
     erate, emax = 8.33e-5, np.log(1 + 0.5)
-    hcp_model = hcp_model(
-        Q, N, nthreads, T, path, t_dir, c_dir, prefixs[0], erate, emax, texture_path
-    )
+    crit_twinner = 0.02
 
-    res = hcp_model.driver(use_taylor=True)
-    hcp_model.plot_initial_pf(display=True, savefile=False)
-    hcp_model.deformed_texture(res, display=True, savefile=False)
-    hcp_model.rss_history(res, display=False, savefile=True)
-    hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
-    hcp_model.save_evolve_isv_dataframe(res)
-    hcp_model.save_texture(res)
+    for current_T in Ts:
+        print("starting to calculate T :", current_T)
+        save_path = os.path.join(path, str(current_T) + "/")
+        T = float(current_T)
+        lanlti_model = hcp_model(
+            Q,
+            N,
+            nthreads,
+            T,
+            save_path,
+            t_dir,
+            c_dir,
+            prefixs[0],
+            erate,
+            emax,
+            texture_path,
+            crit_twinner,
+        )
+        res = lanlti_model.driver(use_taylor=True)
+        lanlti_model.plot_initial_pf(display=False, savefile=True)
+        lanlti_model.deformed_texture(res, display=False, savefile=True)
+        lanlti_model.rss_history(res, display=False, savefile=True)
+        lanlti_model.save_accum_isv_dataframe(res, display=False, savefile=True)
+        lanlti_model.save_evolve_isv_dataframe(res)
+        lanlti_model.save_texture(res)

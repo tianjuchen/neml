@@ -43,7 +43,7 @@ def load_texture_input(path):
         # output = os.path.basename(f).split("_")[1]
         file_name = os.path.basename(f).split(".csv")[0]
         # print("file_name:", file_name)
-        if file_name == "tension_texture_298":
+        if file_name == "history":
             df = pd.read_csv(f)
             ori_1 = df["ori_1"]
             ori_2 = df["ori_2"]
@@ -93,7 +93,7 @@ def load_texture_input(path):
 
 if __name__ == "__main__":
 
-    path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/simple_4/simplehard/"
+    path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/"
     orientations, orientations_filp = load_texture_input(path)
 
     # orientations = [
@@ -174,7 +174,6 @@ if __name__ == "__main__":
     plt.show()
     plt.close()
 
-
     polefigures.pole_figure_discrete(
         orientations,
         [1, 0, -1, 0],
@@ -197,7 +196,6 @@ if __name__ == "__main__":
     plt.show()
     plt.close()
 
-
     polefigures.pole_figure_discrete(
         orientations,
         [1, 0, -1, 1],
@@ -219,6 +217,5 @@ if __name__ == "__main__":
     plt.title("Deformed, <10-11>")
     plt.show()
     plt.close()
-
 
     sys.exit("stop")
