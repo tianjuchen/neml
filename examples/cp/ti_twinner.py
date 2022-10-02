@@ -48,7 +48,7 @@ class extrapolate:
 
 class hcp_model:
     def __init__(
-        self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax, oripath
+        self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax, oripath, ctwin
     ):
         self.Q = Q
         self.N = N
@@ -61,17 +61,127 @@ class hcp_model:
         self.compression = c_dir
         self.prefix = prefix
         self.oripath = oripath
+        self.ctwin = ctwin
 
     def hcp_singlecrystal(
         self, verbose=False, update_rotation=True, PTR=True, return_isv=False
     ):
 
-        # Constant part of the strength for slip and twin
-        tau0 = np.array([200.0]*3+[120.0]*3+[230.0]*6+[200.0]*6+[250.0]*6)
+        # temperature levels
+        Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1073.0, 1173.0])
+        # unit transformer
+        ut = 1.0e-3
 
         # Model
-        a = 2.9511 * 0.1  # nm
-        c = 4.68433 * 0.1  # nm
+        a = 2.9511 * 0.1 * ut  # nm
+        c = 4.68433 * 0.1 * ut  # nm
+
+        # Elastic constants in MPa
+        C11 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                162400.0,
+                155100.0,
+                149500.0,
+                144200.0,
+                136800.0,
+                132200.0,
+                127600.0,
+                123100.0,
+                119600.0,
+            ],
+        )
+        C33 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                180700.0,
+                175300.0,
+                171500.0,
+                167800.0,
+                162700.0,
+                159300.0,
+                156000.0,
+                152900.0,
+                150400.0,
+            ],
+        )
+        C44 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                46700.0,
+                44400.0,
+                42400.0,
+                40300.0,
+                37000.0,
+                34800.0,
+                32600.0,
+                30700.0,
+                29100.0,
+            ],
+        )
+        C12 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                92000.0,
+                94300.0,
+                96100.0,
+                97300.0,
+                98500.0,
+                99100.0,
+                99300.0,
+                99600.0,
+                99600.0,
+            ],
+        )
+        C13 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                69000.0,
+                69500.0,
+                69200.0,
+                69100.0,
+                68800.0,
+                68800.0,
+                68800.0,
+                68800.0,
+                68800.0,
+            ],
+        )
+
+        # Constant part of the strength for slip and twin
+        taus_1 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [200.0, 145.0, 100.0, 70.0, 53.0, 38.0, 18.0, 15.0, 9.0]
+        )
+        taus_2 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [120.0, 70.5, 60.0, 60.0, 43.0, 38.0, 18.0, 15.0, 9.0]
+        )
+        taus_3 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [230.0, 185.0, 145.0, 110.0, 87.0, 61.0, 35.0, 20.0, 11.0]
+        )
+        taut_1 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [200.0, 170.0, 160.0, 150.0, 120.0, 110.0, 100.0, 100.0, 100.0]
+        )
+        taut_2 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [250.0, 240.0, 230.0, 210.0, 200.0, 190.0, 180.0, 180.0, 180.0]
+        )
+        # tau0 = np.array([170.0]*3+[90.5]*3+[210]*6+[180.0]*6+[250.0]*6)
+        tau0 = np.array(
+            [taus_1] * 3 + [taus_2] * 3 + [taus_3] * 6 + [taut_1] * 6 + [taut_2] * 6
+        )
+
+        # Reference slip rate and rate sensitivity exponent
+        g0 = 1.0
+        # if strain rate is 1e-2
+        # n = 12.0
+        # if strain rate is 1e-3
+        # n = 7.5
+        applied_rate = 8.33e-5
+        rates_control = np.array([1e-3, 1e-2])
+        sense_control = np.array([7.5, 12.0])
+        n = extrapolate(rates_control, sense_control).value(applied_rate)
+
+        # Twin threshold
+        twin_threshold = self.ctwin
 
         # Sets up the lattice crystallography
         lattice = crystallography.HCPLattice(a, c)
@@ -90,28 +200,86 @@ class hcp_model:
             [1, 1, -2, -3], [1, 1, -2, 2], [2, 2, -4, 3], [1, 1, -2, -4]
         )
 
-        # Hardening coefficients for slip (H1) and twinning (H2)
-        H1 = 10.0
-        H2 = 10.0
-
-        # Reference slip rate and rate sensitivity exponent
-        g0 = 1.0
-        n = 12.0
-
-        E = 100000.0
-        nu = 0.3
-
-        twin_threshold = 0.75
-
         # Sets up the interaction matrix
-        M = matrix.SquareMatrix(
-            24, type="diagonal_blocks", data=[H1, H2], blocks=[12, 12]
+        num_basal, num_prism, num_pyram = 3, 3, 6
+        num_ttwin, num_ctwin = 6, 6
+        ## basal plane
+        C1_single = np.array([50.0] * num_ttwin + [50.0] * num_ctwin)
+        C1 = np.stack([C1_single for _ in range(num_basal)])
+        ## prismatic plane
+        C2_single = np.array([100.0] * num_ttwin + [1000.0] * num_ctwin)
+        C2 = np.stack([C2_single for _ in range(num_prism)])
+        ## pyramidal plane
+        C3_single = np.array([250.0] * num_ttwin + [170.0] * num_ctwin)
+        C3 = np.stack([C3_single for _ in range(num_pyram)])
+        ## stack up each slip system
+        C_np = np.vstack((C1, C2, C3)).T
+
+        C_st = matrix.SquareMatrix(12, type="dense", data=C_np.flatten())
+
+        # source from Fracture of Titanium Alloys at High Strain Rates and under Stress Triaxiality
+        # calculate temperature depdendent shear modulus of slip systems  u = 39.61-0.03223*T
+        mu_slip = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                35200.0,
+                30400.0,
+                26700.0,
+                23400.0,
+                19100.0,
+                16600.0,
+                14200.0,
+                11800.0,
+                10000.0,
+            ],
         )
-        strength = slipharden.SimpleLinearHardening(M, tau0)
+        # calculate temperature depdendent shear modulus of twin systems  u = 34.605-0.03223*T
+        mu_twin = interpolate.PiecewiseLinearInterpolate(
+            list(Ts),
+            [
+                25000.46,
+                21591.31,
+                18963.42,
+                16619.62,
+                13565.60,
+                11789.99,
+                10085.41,
+                8381.28,
+                7102.78,
+            ],
+        )
+
+        mu = np.array([mu_slip] * 12 + [mu_twin] * 12)
+
+        k1 = np.array([1.0] * 3 + [0.25] * 3 + [5.0] * 6) / ut
+
+        k2_1 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [250.0, 280.0, 330.0, 450.0, 500.0, 600.0, 1020.0, 1200.0, 1400.0]
+        )
+        k2_2 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [250.0, 280.0, 330.0, 450.0, 500.0, 600.0, 1020.0, 1200.0, 1400.0]
+        )
+        k2_3 = interpolate.PiecewiseLinearInterpolate(
+            list(Ts), [250.0, 280.0, 330.0, 450.0, 500.0, 600.0, 1020.0, 1200.0, 1400.0]
+        )
+
+        k2 = np.array([k2_1] * 3 + [k2_2] * 3 + [k2_3] * 6)
+
+        # Sets up the linear elastic tensor
+        emodel = elasticity.TransverseIsotropicLinearElasticModel(
+            C11, C33, C12, C13, C44, "components"
+        )
+
+        # Sets up the slip system strength model (this is what you'll change)
+        strength = slipharden.LANLTiModel(tau0, C_st, mu, k1, k2, X_s=0.9, inivalue=1.0)
+        # Sets up the slip rule
         slipmodel = sliprules.PowerLawSlipRule(strength, g0, n)
+        # Sets up the model inelastic rate kinematics
         imodel = inelasticity.AsaroInelasticity(slipmodel)
-        emodel = elasticity.IsotropicLinearElasticModel(E, "youngs", nu, "poissons")
+        # Sets up the overall model kinematics
         kmodel = kinematics.StandardKinematicModel(emodel, imodel)
+
+        # This is the object that causes twins to recrystallize
         twinner = postprocessors.PTRTwinReorientation(twin_threshold)
 
         # Sets up the single crystal model
@@ -168,6 +336,10 @@ class hcp_model:
             return_isv=True
         )
         return single_model
+
+    def report_history(self):
+        single_model = self.sxtal_model()
+        return single_model.report_internal_variable_names()
 
     def orientations(self, random=True, initial=False):
         if random:
@@ -232,7 +404,7 @@ class hcp_model:
         return plt.close()
 
     def driver(self, full_res=True, use_taylor=True):
-        
+
         if use_taylor:
             res = drivers.uniaxial_test(
                 self.taylor_model(),
@@ -252,7 +424,8 @@ class hcp_model:
                 T=self.T,
                 verbose=True,
                 full_results=full_res,
-            )            
+            )
+
         return res
 
     def usym(self, v):
@@ -303,13 +476,13 @@ class hcp_model:
                         integrated_ourselves[i - 1, lattice.flat(g, j)]
                         + np.abs(slip_rate) * dt
                     )
-                    if lattice.flat(g, j) < 24:
+                    if lattice.flat(g, j) < 12:
                         direct_from_model[i, lattice.flat(g, j)] = hist.get_scalar(
-                            "slip" + str(lattice.flat(g, j))
+                            "pslip" + str(lattice.flat(g, j) + 24)
                         )
                     else:
                         direct_from_model[i, lattice.flat(g, j)] = hist.get_scalar(
-                            "twin" + str(lattice.flat(g, j))
+                            "slip" + str(lattice.flat(g, j))
                         )
                     taus_from_model[
                         i, lattice.flat(g, j)
@@ -449,7 +622,7 @@ class hcp_model:
         print("plotting accumulated slip strain evolution")
         print("")
         _ = self.history_plot(
-            integrated_ourselves[-1, :12],
+            integrated_ourselves[-1, :12] / self.N,
             "Slip System",
             "Accumulated Slip Strain",
             "slip-strain",
@@ -462,7 +635,7 @@ class hcp_model:
         print("plotting accumulated twin strain evolution")
         print("")
         _ = self.history_plot(
-            integrated_ourselves[-1, 12:],
+            integrated_ourselves[-1, 12:] / self.N,
             "Twin System",
             "Accumulated Twin Strain",
             "twin-strain",
@@ -475,7 +648,7 @@ class hcp_model:
         print("plotting accumulated hardening evolution")
         print("")
         _ = self.history_plot(
-            taus_from_model[-1, :],
+            taus_from_model[-1, :] / self.N,
             "slip/twin System",
             "hardening",
             "hardening-evolution",
@@ -506,30 +679,30 @@ class hcp_model:
 
     def accumulated_density(self, res, accum=True):
         if accum:
-            return self.accumulate_history(res, 8, 20)
+            return self.accumulate_history(res, 21, 43)
         else:
-            return self.accumulate_history(res, 8, 20, accum=accum)
+            return self.accumulate_history(res, 21, 43, accum=accum)
 
     def accumulated_twin(self, res, accum=True):
         if accum:
-            return self.accumulate_history(res, 20, 32)
+            return self.accumulate_history(res, 43, 55)
         else:
-            return self.accumulate_history(res, 20, 32, accum=accum)
+            return self.accumulate_history(res, 43, 55, accum=accum)
 
     def accumulated_slip(self, res, accum=True):
         if accum:
-            return self.accumulate_history(res, 32, 44)
+            return self.accumulate_history(res, 55, 67)
         else:
-            return self.accumulate_history(res, 32, 44, accum=accum)
+            return self.accumulate_history(res, 55, 67, accum=accum)
 
     def save_accum_isv_dataframe(self, res, display=True, savefile=False):
-        accu_density = self.accumulated_density(res)
-        accu_twin = self.accumulated_twin(res)
-        accu_slip = self.accumulated_slip(res)
+        accu_density = self.accumulated_density(res) / self.N
+        accu_twin = self.accumulated_twin(res) / self.N
+        accu_slip = self.accumulated_slip(res) / self.N
 
         # plot distribution of dislocation density
         _ = self.history_plot(
-            accu_density**2 * 1.0e12,
+            accu_density**2 * 1.0e12 / self.N,
             "Slip System",
             "Accumulated Dislocation Density",
             "{}-dislocation-density".format(self.prefix),
@@ -539,7 +712,7 @@ class hcp_model:
 
         # plot distribution of accumulated twin strain
         _ = self.history_plot(
-            accu_twin,
+            accu_twin / self.N,
             "Twin System",
             "Accumulated Twin Strain",
             "{}-twin-strain".format(self.prefix),
@@ -549,7 +722,7 @@ class hcp_model:
 
         # plot distribution of accumulated slip strain
         _ = self.history_plot(
-            accu_slip,
+            accu_slip / self.N,
             "Slip System",
             "Accumulated Slip Strain",
             "{}-slip-strain".format(self.prefix),
@@ -559,9 +732,9 @@ class hcp_model:
 
         data = pd.DataFrame(
             {
-                "dis_density": accu_density**2 * 1.0e12,
-                "accu_twin": accu_twin,
-                "accu_slip": accu_slip,
+                "dis_density": accu_density**2 * 1.0e12 / self.N,
+                "accu_twin": accu_twin / self.N,
+                "accu_slip": accu_slip / self.N,
             }
         )
 
@@ -638,7 +811,7 @@ class hcp_model:
         plt.close()
 
         polefigures.pole_figure_discrete(pf, [1, 0, -1, 0], lattice=self.Lattice())
-        plt.title("Final, <1010>")
+        plt.title("Final, <10-10>")
         if savefile:
             plt.savefig(
                 self.path + "deformpf-%i-C-2.pdf" % int(self.T - 273.15), dpi=300
@@ -648,7 +821,7 @@ class hcp_model:
         plt.close()
 
         polefigures.pole_figure_discrete(pf, [1, 1, -2, 0], lattice=self.Lattice())
-        plt.title("Final, <1120>")
+        plt.title("Final, <11-20>")
         if savefile:
             plt.savefig(
                 self.path + "deformpf-%i-C-3.pdf" % int(self.T - 273.15), dpi=300
@@ -658,7 +831,7 @@ class hcp_model:
         plt.close()
 
         polefigures.pole_figure_discrete(pf, [1, 0, -1, 1], lattice=self.Lattice())
-        plt.title("Final, <1011>")
+        plt.title("Final, <10-11>")
         if savefile:
             plt.savefig(
                 self.path + "deformpf-%i-C-4.pdf" % int(self.T - 273.15), dpi=300
@@ -675,7 +848,6 @@ class hcp_model:
         updated_euler = [
             q.to_euler(angle_type="degrees", convention="kocks") for q in updated_quats
         ]
-
         data = pd.DataFrame(
             {
                 "ori_1": np.array(updated_euler)[:, 0],
@@ -693,24 +865,44 @@ if __name__ == "__main__":
     path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/twinner/"
     texture_path = "/mnt/c/Users/ladmin/Desktop/argonne/neml/neml/examples/cp/"
     Q = rotations.CrystalOrientation(
-        20.0, 35.0, 30.0, angle_type="degrees", convention="kocks"
+        0.0, 0.0, 0.0, angle_type="degrees", convention="kocks"
     )
     c_dir = np.array([-1, 0, 0, 0, 0, 0])
-    t_dir = np.array([0, 1, -1, 0, 0, 0])
+    t_dir = np.array([1, 0, 0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
     N, nthreads = 1, 1
-    T = 298.0
-    erate, emax = 8.33e-5, np.log(1 + 1.0)
+    Ts = np.array([298, 773, 873, 1023, 1173])
+    erate, emax = 8.33e-5, np.log(1 + 0.5)
+    crit_twinner = 0.02
 
-    hcp_model = hcp_model(
-        Q, N, nthreads, T, path, t_dir, c_dir, prefixs[0], erate, emax, texture_path
-    )
+    for current_T in Ts:
+        print("starting to calculate T :", current_T)
+        save_path = os.path.join(path, str(current_T) + "/")
+        T = float(current_T)
+        lanlti_model = hcp_model(
+            Q,
+            N,
+            nthreads,
+            T,
+            save_path,
+            t_dir,
+            c_dir,
+            prefixs[0],
+            erate,
+            emax,
+            texture_path,
+            crit_twinner,
+        )
+        history_names = lanlti_model.report_history()
+        print("hist names are:", history_names)
+        sys.exit("stop here")
+        res = lanlti_model.driver(use_taylor=True)
+        print("shape of history: ", np.array(res["history"]).shape)
 
-    res = hcp_model.driver(use_taylor=False)
-    hcp_model.plot_initial_pf(display=True, savefile=False)
-    # hcp_model.deformed_texture(res, display=False, savefile=True)
-    # hcp_model.save_texture(res)
-    # hcp_model.rss_history(res, display=False, savefile=True)
-    # hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
-    # hcp_model.save_evolve_isv_dataframe(res)
+        lanlti_model.plot_initial_pf(display=False, savefile=True)
+        lanlti_model.deformed_texture(res, display=False, savefile=True)
+        lanlti_model.rss_history(res, display=False, savefile=True)
+        lanlti_model.save_accum_isv_dataframe(res, display=False, savefile=True)
+        lanlti_model.save_evolve_isv_dataframe(res)
+        lanlti_model.save_texture(res)
