@@ -48,7 +48,20 @@ class extrapolate:
 
 class hcp_model:
     def __init__(
-        self, Q, N, threads, T, path, t_dir, c_dir, prefix, erate, emax, oripath
+        self,
+        Q,
+        N,
+        threads,
+        T,
+        path,
+        t_dir,
+        c_dir,
+        prefix,
+        erate,
+        emax,
+        oripath,
+        ctwin,
+        use_ptr=True,
     ):
         self.Q = Q
         self.N = N
@@ -61,10 +74,10 @@ class hcp_model:
         self.compression = c_dir
         self.prefix = prefix
         self.oripath = oripath
+        self.ctwin = ctwin
+        self.use_ptr = use_ptr
 
-    def hcp_singlecrystal(
-        self, verbose=False, update_rotation=True, PTR=True, return_isv=False
-    ):
+    def hcp_singlecrystal(self, verbose=False, update_rotation=True, return_isv=False):
 
         # temperature levels
         Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1073.0, 1173.0])
@@ -180,7 +193,7 @@ class hcp_model:
         n = extrapolate(rates_control, sense_control).value(applied_rate)
 
         # Twin threshold
-        twin_threshold = 0.05
+        twin_threshold = self.ctwin
 
         # Sets up the lattice crystallography
         lattice = crystallography.HCPLattice(a, c)
@@ -282,7 +295,7 @@ class hcp_model:
         twinner = postprocessors.PTRTwinReorientation(twin_threshold)
 
         # Sets up the single crystal model
-        if PTR:
+        if self.use_ptr:
             single_model = singlecrystal.SingleCrystalModel(
                 kmodel,
                 lattice,
@@ -617,10 +630,19 @@ class hcp_model:
         print("plotting accumulated slip strain evolution")
         print("")
         _ = self.history_plot(
-            integrated_ourselves[-1, :12],
+            integrated_ourselves[-1, :12] / self.N,
             "Slip System",
             "Accumulated Slip Strain",
-            "slip-strain",
+            "integrate-slip-strain",
+            display=display,
+            savefile=savefile,
+        )
+
+        _ = self.history_plot(
+            direct_from_model[-1, :12] / self.N,
+            "Slip System",
+            "Accumulated Slip Strain",
+            "direct-slip-strain",
             display=display,
             savefile=savefile,
         )
@@ -630,20 +652,29 @@ class hcp_model:
         print("plotting accumulated twin strain evolution")
         print("")
         _ = self.history_plot(
-            integrated_ourselves[-1, 12:],
+            integrated_ourselves[-1, 12:] / self.N,
             "Twin System",
             "Accumulated Twin Strain",
-            "twin-strain",
+            "integrate-twin-strain",
             display=display,
             savefile=savefile,
         )
 
+        _ = self.history_plot(
+            direct_from_model[-1, 12:] / self.N,
+            "Twin System",
+            "Accumulated Twin Strain",
+            "direct-twin-strain",
+            display=display,
+            savefile=savefile,
+        )
+        
         # plot hardening evolution
         print("")
         print("plotting accumulated hardening evolution")
         print("")
         _ = self.history_plot(
-            taus_from_model[-1, :],
+            taus_from_model[-1, :] / self.N,
             "slip/twin System",
             "hardening",
             "hardening-evolution",
@@ -673,22 +704,40 @@ class hcp_model:
         return accum_hist_var
 
     def accumulated_density(self, res, accum=True):
-        if accum:
-            return self.accumulate_history(res, 8, 20)
+        if self.use_ptr:
+            if accum:
+                return self.accumulate_history(res, 21, 33)
+            else:
+                return self.accumulate_history(res, 21, 33, accum=accum)
         else:
-            return self.accumulate_history(res, 8, 20, accum=accum)
+            if accum:
+                return self.accumulate_history(res, 8, 20)
+            else:
+                return self.accumulate_history(res, 8, 20, accum=accum)
 
     def accumulated_twin(self, res, accum=True):
-        if accum:
-            return self.accumulate_history(res, 20, 32)
+        if self.use_ptr:
+            if accum:
+                return self.accumulate_history(res, 33, 45)
+            else:
+                return self.accumulate_history(res, 33, 45, accum=accum)
         else:
-            return self.accumulate_history(res, 20, 32, accum=accum)
+            if accum:
+                return self.accumulate_history(res, 20, 32)
+            else:
+                return self.accumulate_history(res, 20, 32, accum=accum)
 
     def accumulated_slip(self, res, accum=True):
-        if accum:
-            return self.accumulate_history(res, 32, 44)
+        if self.use_ptr:
+            if accum:
+                return self.accumulate_history(res, 45, 57)
+            else:
+                return self.accumulate_history(res, 45, 57, accum=accum)
         else:
-            return self.accumulate_history(res, 32, 44, accum=accum)
+            if accum:
+                return self.accumulate_history(res, 32, 44)
+            else:
+                return self.accumulate_history(res, 32, 44, accum=accum)
 
     def save_accum_isv_dataframe(self, res, display=True, savefile=False):
         accu_density = self.accumulated_density(res) / self.N
@@ -863,20 +912,37 @@ if __name__ == "__main__":
         0.0, 0.0, 0.0, angle_type="degrees", convention="kocks"
     )
     c_dir = np.array([-1, 0, 0, 0, 0, 0])
-    t_dir = np.array([0, 1.0, -1.0, 0, 0, 0])
+    t_dir = np.array([1, 0, 0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
     N, nthreads = 1, 1
-    T = 298.0
+    Ts = np.array([298, 773, 873, 1023, 1173])
     erate, emax = 8.33e-5, np.log(1 + 0.5)
-    hcp_model = hcp_model(
-        Q, N, nthreads, T, path, t_dir, c_dir, prefixs[0], erate, emax, texture_path
-    )
+    crit_twinner = 0.02
 
-    res = hcp_model.driver(use_taylor=True)
-    hcp_model.plot_initial_pf(display=True, savefile=False)
-    hcp_model.deformed_texture(res, display=True, savefile=False)
-    hcp_model.rss_history(res, display=False, savefile=True)
-    hcp_model.save_accum_isv_dataframe(res, display=False, savefile=True)
-    hcp_model.save_evolve_isv_dataframe(res)
-    hcp_model.save_texture(res)
+    for current_T in Ts:
+        print("starting to calculate T :", current_T)
+        save_path = os.path.join(path, str(current_T) + "/")
+        T = float(current_T)
+        lanlti_model = hcp_model(
+            Q,
+            N,
+            nthreads,
+            T,
+            save_path,
+            t_dir,
+            c_dir,
+            prefixs[0],
+            erate,
+            emax,
+            texture_path,
+            crit_twinner,
+            use_ptr=True,
+        )
+        res = lanlti_model.driver(use_taylor=True)
+        lanlti_model.plot_initial_pf(display=False, savefile=True)
+        lanlti_model.deformed_texture(res, display=False, savefile=True)
+        lanlti_model.rss_history(res, display=False, savefile=True)
+        lanlti_model.save_accum_isv_dataframe(res, display=False, savefile=True)
+        lanlti_model.save_evolve_isv_dataframe(res)
+        lanlti_model.save_texture(res)
