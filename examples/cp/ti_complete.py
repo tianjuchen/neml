@@ -436,6 +436,21 @@ class hcp_model:
 
         return res
 
+    def plot_ss(self, use_taylor=True, display=True, savefile=False):
+        res = self.driver(full_res=False, use_taylor=use_taylor)
+        plt.plot(res["strain"], res["stress"], "k-", lw=2)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.xlabel("Strain (mm/mm)", fontsize=14)
+        plt.ylabel("Stress (MPa)", fontsize=14)
+        plt.grid(False)
+        plt.tight_layout()
+        if savefile:
+            plt.savefig(self.path + "Stress-strain-{}.pdf".format(self.T), dpi=300)
+        if display:
+            plt.show()
+        return plt.close()
+
     def usym(self, v):
         """
         Take a Mandel symmetric vector to the full matrix.
@@ -668,7 +683,7 @@ class hcp_model:
             display=display,
             savefile=savefile,
         )
-        
+
         # plot hardening evolution
         print("")
         print("plotting accumulated hardening evolution")
@@ -920,7 +935,7 @@ if __name__ == "__main__":
     erate, emax = 8.33e-5, np.log(1 + 0.5)
     crit_twinner = 0.02
 
-    for current_T in Ts:
+    for current_T in Ts[:1]:
         print("starting to calculate T :", current_T)
         save_path = os.path.join(path, str(current_T) + "/")
         T = float(current_T)
@@ -939,6 +954,8 @@ if __name__ == "__main__":
             crit_twinner,
             use_ptr=True,
         )
+
+        lanlti_model.plot_ss(use_taylor=True, display=False, savefile=True)
         res = lanlti_model.driver(use_taylor=True)
         lanlti_model.plot_initial_pf(display=False, savefile=True)
         lanlti_model.deformed_texture(res, display=False, savefile=True)
