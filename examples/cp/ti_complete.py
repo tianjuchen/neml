@@ -349,7 +349,7 @@ class hcp_model:
         )
         return single_model
 
-    def orientations(self, random=True, initial=False):
+    def orientations(self, random=False, initial=True):
         if random:
             orientations = rotations.random_orientations(self.N)
         elif initial:
@@ -935,7 +935,7 @@ if __name__ == "__main__":
     t_dir = np.array([1, 0, 0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
-    N, nthreads = 1, 1
+    N, nthreads = 500, 15
     Ts = np.array([298, 773, 873, 1023, 1173])
     erate, emax = 8.33e-5, np.log(1 + 0.5)
     crit_twinner = 0.02
