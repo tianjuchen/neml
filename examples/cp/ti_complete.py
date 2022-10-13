@@ -180,7 +180,7 @@ class hcp_model:
         tau0 = np.array(
             [taus_1] * 3 + [taus_2] * 3 + [taus_3] * 6 + [taut_1] * 6 + [taut_2] * 6
         )
-
+        
         # Reference slip rate and rate sensitivity exponent
         g0 = 1.0
         # if strain rate is 1e-2
@@ -349,7 +349,7 @@ class hcp_model:
         )
         return single_model
 
-    def orientations(self, random=False, initial=True):
+    def orientations(self, random=True, initial=False):
         if random:
             orientations = rotations.random_orientations(self.N)
         elif initial:
@@ -759,10 +759,40 @@ class hcp_model:
             else:
                 return self.accumulate_history(res, 32, 44, accum=accum)
 
+    def accumulated_twinn_fraction(self, res, accum=True):
+        if self.use_ptr:
+            if accum:
+                return self.accumulate_history(res, 8, 20)
+            else:
+                return self.accumulate_history(res, 8, 20, accum=accum)
+        else:
+            raise ValueError("no twinner recording the fraction!!")
+
+    def count_twinned(self, res, accum=True, display=True, savefile=False):
+        if self.use_ptr:
+            if accum:
+                tf = self.accumulate_history(res, 20, 21)
+            else:
+                tf = self.accumulate_history(res, 20, 21, accum=accum)
+        else:
+            raise ValueError("no twinner recording the fraction!!")
+
+        _ = self.history_plot(
+            tf,
+            "Twin Counting",
+            "Twin count",
+            "{}-twin-count".format(self.prefix),
+            display=display,
+            savefile=savefile,
+        )
+
+        return tf
+
     def save_accum_isv_dataframe(self, res, display=True, savefile=False):
         accu_density = self.accumulated_density(res) / self.N
         accu_twin = self.accumulated_twin(res) / self.N
         accu_slip = self.accumulated_slip(res) / self.N
+        accu_tf = self.accumulated_twinn_fraction(res) / self.N
 
         # plot distribution of dislocation density
         _ = self.history_plot(
@@ -794,11 +824,22 @@ class hcp_model:
             savefile=savefile,
         )
 
+        # plot distribution of accumulated twin fraction
+        _ = self.history_plot(
+            accu_tf,
+            "Twin System",
+            "Accumulated Twin Fraction",
+            "{}-twin-fraction".format(self.prefix),
+            display=display,
+            savefile=savefile,
+        )
+
         data = pd.DataFrame(
             {
                 "dis_density": accu_density**2 * 1.0e12,
                 "accu_twin": accu_twin,
                 "accu_slip": accu_slip,
+                "accu_tf": accu_tf,
             }
         )
 
@@ -935,12 +976,12 @@ if __name__ == "__main__":
     t_dir = np.array([1, 0, 0, 0, 0, 0])
     dirs = [t_dir, c_dir]
     prefixs = ["tension", "compression"]
-    N, nthreads = 500, 15
+    N, nthreads = 1, 1
     Ts = np.array([298, 773, 873, 1023, 1173])
     erate, emax = 8.33e-5, np.log(1 + 0.5)
     crit_twinner = 0.02
 
-    for current_T in Ts[1:2]:
+    for current_T in Ts[:1]:
         print("starting to calculate T :", current_T)
         save_path = os.path.join(path, str(current_T) + "/")
         T = float(current_T)
@@ -968,3 +1009,4 @@ if __name__ == "__main__":
         lanlti_model.save_accum_isv_dataframe(res, display=False, savefile=True)
         lanlti_model.save_evolve_isv_dataframe(res)
         lanlti_model.save_texture(res)
+        lanlti_model.count_twinned(res, display=False, savefile=True)
