@@ -18,7 +18,7 @@ from neml.cp import (
     postprocessors,
 )
 from neml.math import rotations, tensors, nemlmath, matrix
-from neml import elasticity
+from neml import elasticity, parse
 
 import matplotlib.pyplot as plt
 

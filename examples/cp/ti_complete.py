@@ -77,7 +77,7 @@ class hcp_model:
         self.ctwin = ctwin
         self.use_ptr = use_ptr
 
-    def hcp_singlecrystal(self, verbose=False, update_rotation=True, return_isv=False):
+    def hcp_singlecrystal(self, verbose=False, update_rotation=True, return_isv=False, use_xml=False):
 
         # temperature levels
         Ts = np.array([298.0, 423.0, 523.0, 623.0, 773.0, 873.0, 973.0, 1073.0, 1173.0])
