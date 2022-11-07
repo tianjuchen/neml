@@ -15,7 +15,7 @@ class NEML_EXPORT PolycrystalModel: public NEMLModel_ldi
   PolycrystalModel(ParameterSet & params);
 
   size_t n() const;
-  
+
   virtual void populate_hist(History & hist) const;
   virtual void init_hist(History & hist) const;
 
@@ -38,6 +38,7 @@ class NEML_EXPORT PolycrystalModel: public NEMLModel_ldi
   std::shared_ptr<SingleCrystalModel> model_;
   const std::vector<std::shared_ptr<Orientation>> q0s_;
   int nthreads_;
+  std::vector<double> weights_;
 };
 
 class NEML_EXPORT TaylorModel: public PolycrystalModel
