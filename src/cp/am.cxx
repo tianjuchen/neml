@@ -26,11 +26,11 @@ AMModel::AMModel(ParameterSet & params):
 	Tr_(params.get_parameter<double>("Tr")),
 	ftr_(params.get_parameter<double>("ftr")),
 	varprefix_(params.get_parameter<std::string>("varprefix")), 
-    wslipprefix_(params.get_parameter<std::string>("wslipprefix"))
+    wslipprefix_(params.get_parameter<std::string>("wslipprefix")),
 	islipprefix_(params.get_parameter<std::string>("islipprefix"))
 { 
 
-  if (kw1_->n() != nslip_() and kw2_->n() != nslip_()) {
+  if (kw1_.size() != nslip_() and kw2_.size() != nslip_()) {
     throw std::invalid_argument("Dislocation systems and slip systems do not agree!");
   }
 
@@ -137,13 +137,13 @@ double AMModel::wall_frac(size_t g, size_t i,
 }
 
 
-double AMModel::fsigmoid(const History & history) const
+double AMModel::fmod(const History & history) const
 {
   return 1 / (1 + std::exp(-c_ * (history.get<double>(varnames_[0]) / dc_ - 1.0)));
 }
 
 
-double AMModel::macaulay (double x) const
+double AMModel::macaulay(double x) const
 {
   return (x + std::fabs(x)) / 2.0;
 }
@@ -157,14 +157,14 @@ double AMModel::hist_to_tau(size_t g, size_t i,
 
   return alpha_i_ * mu_[L.flat(g,i)]->value(T) * L.burgers(g,i) 
 	* std::sqrt(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_() + islip_()])))
-	* (1 - wall_frac(g, i, history, L, T, fixed) * (1 - fsigmoid(history)))
+	* (1 - wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history)))
 	+ alpha_w_ * mu_[L.flat(g,i)]->value(T) * L.burgers(g,i)
 	* std::sqrt(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])))
-	* wall_frac(g, i, history, L, T, fixed) * (1 - fsigmoid(history));
+	* wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history));
 }  
 
 
-double AMModel::dfdd (size_t g, size_t i, 
+double AMModel::dfdd(size_t g, size_t i, 
 						  const History & history,
 						  Lattice & L,
 						  double T) const
@@ -176,10 +176,8 @@ double AMModel::dfdd (size_t g, size_t i,
 }
 
 
-double AMModel::dfsigdd (const History & history) const
-{
-  consistency(L);
-  
+double AMModel::dfsigdd(const History & history) const
+{  
   return c_ / dc_ * std::exp(-c_ * (history.get<double>(varnames_[0]) / dc_ - 1.0))
 	* std::pow((1 + std::exp(-c_ 
 	* (history.get<double>(varnames_[0]) / dc_ - 1.0))), -2);
@@ -199,22 +197,22 @@ History AMModel::d_hist_to_tau(size_t g, size_t i,
     if (i2 < nadi_()) {
       res.get<double>(varnames_[i2]) = alpha_i_ * mu_[L.flat(g,i)]->value(T) * L.burgers(g,i)
 		* std::sqrt(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_() + islip_()])))
-		* (1 - dfdd(g, i, history, L, T) + dfdd(g, i, history, L, T) * fsigmoid(history)
+		* (1 - dfdd(g, i, history, L, T) + dfdd(g, i, history, L, T) * fmod(history)
 		+ wall_frac(g, i, history, L, T, fixed) * dfsigdd(history))
 		+ alpha_w_ * mu_[L.flat(g,i)]->value(T) * L.burgers(g,i)
 		* std::sqrt(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])))
-		* (dfdd(g, i, history, L, T) - (dfdd(g, i, history, L, T) * fsigmoid(history)
+		* (dfdd(g, i, history, L, T) - (dfdd(g, i, history, L, T) * fmod(history)
 		+ wall_frac(g, i, history, L, T, fixed) * dfsigdd(history))); 
     } 
 	else if (i2 >= nadi_() and i < wslip_() + nadi_()){
 	  res.get<double>(varnames_[i2]) = 1 / 2 * alpha_w_ * mu_[L.flat(g,i)]->value(T) * L.burgers(g,i)
 		* std::pow(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])), -0.5)
-		* wall_frac(g, i, history, L, T, fixed) * (1 - fsigmoid(history));
+		* wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history));
 	}
     else {
       res.get<double>(varnames_[i2]) = 1 / 2 * alpha_i_ * mu_[L.flat(g,i)]->value(T) * L.burgers(g,i)
 		* std::pow(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_() + islip_()])), -0.5)
-		* (1 - wall_frac(g, i, history, L, T, fixed) * (1 - fsigmoid(history)));
+		* (1 - wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history)));
     }
   }
   return res;
@@ -269,13 +267,14 @@ History AMModel::d_hist_d_s(const Symmetric & stress,
 {
   consistency(L);
   History res = blank_hist().derivative<Symmetric>();
-
-  res.get<Symmetric>(varnames_[0]) = 0.0;
+  
+  res.get<Symmetric>(varnames_[0]) = Symmetric::zero();
   
   for (size_t g = 0; g < L.ngroup(); g++) {
     for (size_t i = 0; i < L.nslip(g); i++) {
       Lattice::SlipType stype = L.slip_type(g,i);   
       size_t k = L.flat(g,i);
+	  double slip = R.slip(g, i, stress, Q, history, L, T, fixed); 
 	  res.get<Symmetric>(varnames_[k + nadi_()]) = 
             (kw1_[k]->value(T) * std::sqrt(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])))
 			- kw2_[k]->value(T) * macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])))

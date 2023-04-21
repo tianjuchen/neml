@@ -29,7 +29,7 @@ PYBIND11_MODULE(hucocks, m) {
     .def("populate_hist", &AMModel::populate_hist)
     .def("init_hist", &AMModel::init_hist)
     .def("wall_frac", &AMModel::wall_frac)
-    .def("fsigmoid", &AMModel::fsigmoid)
+    .def("fmod", &AMModel::fmod)
     .def("macaulay", &AMModel::macaulay)
     .def("hist_to_tau", &AMModel::hist_to_tau)
     .def("dfdd", &AMModel::dfdd)
@@ -39,7 +39,6 @@ PYBIND11_MODULE(hucocks, m) {
     .def("d_hist_d_s", &AMModel::d_hist_d_s)
     .def("d_hist_d_h", &AMModel::d_hist_d_h)
     .def("d_hist_d_h_ext", &AMModel::d_hist_d_h_ext)
-    .def("consistency", &AMModel::consistency)
     ;
 
 } // PYBIND!!_MODULE
