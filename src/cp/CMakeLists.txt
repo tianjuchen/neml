@@ -11,7 +11,7 @@ target_sources(neml PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/polycrystal.cxx
       ${CMAKE_CURRENT_SOURCE_DIR}/crystaldamage.cxx
       ${CMAKE_CURRENT_SOURCE_DIR}/hucocks.cxx
-	  ${CMAKE_CURRENT_SOURCE_DIR}/am.cxx
+	  ${CMAKE_CURRENT_SOURCE_DIR}/addmaf.cxx
       ${CMAKE_CURRENT_SOURCE_DIR}/generalizedhucocks.cxx
       ${CMAKE_CURRENT_SOURCE_DIR}/postprocessors.cxx
 )
@@ -31,7 +31,7 @@ if(WRAP_PYTHON)
       pybind(polycrystal cp)
       pybind(crystaldamage cp)
       pybind(hucocks cp)
-	  pybind(am cp)
+	  pybind(addmaf cp)
       pybind(generalizedhucocks cp)
       pybind(postprocessors cp)
 endif()

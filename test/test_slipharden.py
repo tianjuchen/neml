@@ -849,4 +849,3 @@ class TestLinearSlipHardening(unittest.TestCase, CommonPlasticSlipHardening,
 
   def test_use_nye(self):
     self.assertTrue(self.model.use_nye)
-
