@@ -68,8 +68,8 @@ ParameterSet AMModel::parameters()
   pset.add_parameter<std::vector<NEMLObject>>("kw2");
   pset.add_parameter<std::vector<NEMLObject>>("ki1");
   pset.add_parameter<std::vector<NEMLObject>>("ki2");
-  pset.add_parameter<std::vector<double>>("alpha_w");
-  pset.add_parameter<std::vector<double>>("alpha_i");
+  pset.add_optional_parameter<double>("alpha_w", 0.95);
+  pset.add_optional_parameter<double>("alpha_i", 0.25);
   pset.add_optional_parameter<double>("iniwvalue", 5.0e12);
   pset.add_optional_parameter<double>("iniivalue", 1.0e6);
   pset.add_optional_parameter<double>("inibvalue", 550e-9);

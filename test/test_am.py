@@ -49,24 +49,40 @@ class TestAMModel(unittest.TestCase, CommonSlipHardening):
       [10.0,  15.0,35.0]]))
     
     self.nslip = self.L.ntotal
-    
-    self.M = matrix.SquareMatrix(self.nslip, type = "block", 
-        data = [0.1,0.2,0.3,0.4], blocks = [6,6])
+    self.H = history.History()
 
+    for i in range(25):
+        if i == 0:
+            self.H.add_scalar("wall"+str(i))
+            self.H.set_scalar("wall"+str(i), 550e-9)
+        elif (i<=12 and i>0):
+            self.H.add_scalar("wslip"+str(i))
+            self.H.set_scalar("wslip"+str(i), 1.0e11)
+        else:
+            self.H.add_scalar("islip"+str(i))
+            self.H.set_scalar("islip"+str(i), 1.0e5)
+
+
+    self.M_v = 200.0e3
+    self.M = np.ones((12,)) * self.M_v
+    
     self.T = 300.0
     
-    self.kw1 = np.ones((12,)) * 10.0
-    self.kw2 = np.ones((12,)) * 250.0
+    self.kw1_v = 1.13e9
+    self.kw2_v = 50.0
+    
+    self.kw1 = np.ones((12,)) * self.kw1_v
+    self.kw2 = np.ones((12,)) * self.kw2_v
+    
+    self.ki1_v = 1.13e8
+    self.ki2_v = 50.0
 
-    self.ki1 = np.ones((12,)) * 10.0
-    self.ki2 = np.ones((12,)) * 250.0
+    self.ki1 = np.ones((12,)) * self.ki1_v
+    self.ki2 = np.ones((12,)) * self.ki2_v
 
-    self.alpha_w = 0.95
-    self.alpha_i = 0.25
-   
-    self.model = addmaf.AMModel(self.M, self.kw1, self.kw2, self.ki1, self.ki2,
-        self.alpha_w, self.alpha_i)
-
+    self.model = addmaf.AMModel(self.M, self.kw1, self.kw2, self.ki1, self.ki2)
+    
+    
     self.g0 = 1.0
     self.n = 3.0
     self.sliprule = sliprules.PowerLawSlipRule(self.model, self.g0, self.n)

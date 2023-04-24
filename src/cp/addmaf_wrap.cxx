@@ -8,7 +8,7 @@ PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
 namespace neml {
 
-PYBIND11_MODULE(hucocks, m) {
+PYBIND11_MODULE(addmaf, m) {
   py::module::import("neml.objects");
   py::module::import("neml.cp.slipharden");
   py::module::import("neml.cp.sliprules");
@@ -21,8 +21,7 @@ PYBIND11_MODULE(hucocks, m) {
     .def(py::init([](py::args args, py::kwargs kwargs)
                   {
                     return create_object_python<AMModel>(
-                        args, kwargs, {"mu", "kw1", "kw2", "ki1", "ki2", "alpha_w",
-                        "alpha_i"});
+                        args, kwargs, {"mu", "kw1", "kw2", "ki1", "ki2"});
                   }))
     .def("varnames", &AMModel::varnames)
     .def("set_varnames", &AMModel::set_varnames)
