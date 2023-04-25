@@ -84,6 +84,7 @@ class NEML_EXPORT AMModel: public SlipHardening
                      double T, const SlipRule & R,
                      const History & fixed,
                      std::vector<std::string> ext) const;
+					 
 
  protected:
   size_t nadi_() const {return 1;};
@@ -96,7 +97,7 @@ class NEML_EXPORT AMModel: public SlipHardening
  private:
   std::vector<std::shared_ptr<Interpolate>> mu_, kw1_, kw2_, ki1_, ki2_;
   double alpha_w_, alpha_i_, iniwvalue_, iniivalue_, inibvalue_;
-  double kb_, R_, k0_, dc_, c_, lambda_, omega_, Q_;
+  double b_, kb_, R_, k0_, dc_, c_, lambda_, omega_, Q_;
   double Tr_, ftr_;
   std::string varprefix_, wslipprefix_, islipprefix_;
   std::vector<std::string> varnames_;
