@@ -45,8 +45,8 @@ class CommonSlipHardening:
 
         nd = nd.reshape(d.shape)
         
-        # print("nd is:", nd.reshape(25, 25))
-        # print("d is:", d.reshape(25, 25))
+        print("nd is:", nd.reshape(25, 25))
+        print("d is:", d.reshape(25, 25))
 
         self.assertTrue(np.allclose(nd.reshape(d.shape), d, rtol=1.0e-4))
     
