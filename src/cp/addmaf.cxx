@@ -225,14 +225,14 @@ History AMModel::hist(const Symmetric & stress,
 
   History res = blank_hist();
   
-  double ddot = k0_ * std::exp(-Q_ / R_ * T)
+  double ddot = k0_ * std::exp(-Q_ /( R_ * T))
 	* history.get<double>(varnames_[0])
 	* std::exp(-history.get<double>(varnames_[0])/dc_);
 
   for (size_t g = 0; g < L.ngroup(); g++) {
     for (size_t i = 0; i < L.nslip(g); i++) {
       size_t k = L.flat(g,i);
-	    res.get<double>(varnames_[0]) = k0_ * std::exp(-Q_ / R_ * T)
+	    res.get<double>(varnames_[0]) = k0_ * std::exp(-Q_ /( R_ * T))
 			* history.get<double>(varnames_[0])
 			* std::exp(-history.get<double>(varnames_[0])/dc_);
         res.get<double>(varnames_[k + nadi_()]) = 
@@ -240,7 +240,7 @@ History AMModel::hist(const Symmetric & stress,
 			- kw2_[k]->value(T) * macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])))
 			* fabs(R.slip(g,i,stress,Q,history,L,T,fixed))
 			- 2 / lambda_ * std::pow(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])), 1.5)
-			* k0_ * std::exp(-Q_ / R_ * T)
+			* k0_ * std::exp(-Q_ /( R_ * T))
 			* history.get<double>(varnames_[0])
 			* std::exp(-history.get<double>(varnames_[0])/dc_)
 			* T / (T + Tr_) * ftr_;
@@ -250,7 +250,7 @@ History AMModel::hist(const Symmetric & stress,
 			- ki2_[k]->value(T) * macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_() + islip_()])))
 			* fabs(R.slip(g,i,stress,Q,history,L,T,fixed))
 			+ 2 / lambda_ * std::pow(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])), 1.5)
-			* k0_ * std::exp(-Q_ / R_ * T)
+			* k0_ * std::exp(-Q_ /( R_ * T))
 			* history.get<double>(varnames_[0])
 			* std::exp(-history.get<double>(varnames_[0])/dc_)
 			* T / (T + Tr_) * ftr_;
@@ -299,18 +299,18 @@ History AMModel::d_hist_d_h(const Symmetric & stress,
   consistency(L); 
   auto res = blank_hist().derivative<History>();
 
-  double ddot = k0_ * std::exp(-Q_ / R_ * T)
+  double ddot = k0_ * std::exp(-Q_ / (R_ * T))
 	* history.get<double>(varnames_[0])
 	* std::exp(-history.get<double>(varnames_[0])/dc_);
 
   res.get<double>(varnames_[0] + "_" + varnames_[0]) =
-	k0_ * std::exp(-Q_ / R_ * T)
+	k0_ * std::exp(-Q_ / (R_ * T))
 	* std::exp(-history.get<double>(varnames_[0]) / dc_)
 	* (1 - history.get<double>(varnames_[0]) / dc_);
 
   for (size_t j = 0; j < size(); j++) {
 	std::string other = varnames_[j];
-	res.get<double>(varnames_[0] + "_" + other) = 0.0;
+	res.get<double>(varnames_[0] + "_" + other) += 0.0;
   }	
 
   for (size_t g = 0; g < L.ngroup(); g++) {
@@ -339,7 +339,7 @@ History AMModel::d_hist_d_h(const Symmetric & stress,
 			- kw2_[k]->value(T) * macaulay(history.get<double>(varnames_[k + nadi_()])))
 			* dslip.get<double>(other) * copysign(1.0, slip)
 			- 2 / lambda_ * std::pow(macaulay(history.get<double>(varnames_[k + nadi_()])), 1.5)
-			* k0_ * std::exp(-Q_ / R_ * T) * T / (T + Tr_) * ftr_
+			* k0_ * std::exp(-Q_ / (R_ * T)) * T / (T + Tr_) * ftr_
 			* std::exp(-history.get<double>(varnames_[0]) / dc_)
 			* (1 - history.get<double>(varnames_[0]) / dc_);
 			
@@ -348,7 +348,7 @@ History AMModel::d_hist_d_h(const Symmetric & stress,
 			- ki2_[k]->value(T) * macaulay(history.get<double>(varnames_[k + nadi_() + islip_()])))
 			* dslip.get<double>(other) * copysign(1.0, slip)
 			+ 2 / lambda_ * std::pow(macaulay(history.get<double>(varnames_[k + nadi_()])), 1.5)
-			* k0_ * std::exp(-Q_ / R_ * T) * T / (T + Tr_) * ftr_
+			* k0_ * std::exp(-Q_ / (R_ * T)) * T / (T + Tr_) * ftr_
 			* std::exp(-history.get<double>(varnames_[0]) / dc_)
 			* (1 - history.get<double>(varnames_[0]) / dc_);
 			
@@ -360,15 +360,15 @@ History AMModel::d_hist_d_h(const Symmetric & stress,
 			* dslip.get<double>(other) * copysign(1.0, slip);
 			
 		  res.get<double>(varnames_[k + nadi_() + islip_()] + "_" + other) += 
-			(ki1_[k]->value(T) * std::sqrt(macaulay(history.get<double>(varnames_[k + nadi_() + nadi_()])))
-			- ki2_[k]->value(T) * macaulay(history.get<double>(varnames_[k + nadi_() + nadi_()])))
-			* dslip.get<double>(other) * copysign(1.0, slip);
+			(ki1_[k]->value(T) * std::sqrt(macaulay(history.get<double>(varnames_[k + nadi_() + islip_()])))
+			- ki2_[k]->value(T) * macaulay(history.get<double>(varnames_[k + nadi_() + islip_()])))
+			* dslip.get<double>(other) * copysign(1.0, slip);  
 			
 		  if (k + nadi_() == j){
 			res.get<double>(varnames_[k + nadi_() + islip_()] + "_" + other) += 
 			  3 / lambda_ * std::sqrt(macaulay(history.get<double>(varnames_[k + nadi_()])))
 			  * ddot * T / (T + Tr_) * ftr_;
-		  }   
+		  } 
 		}
 		else {
 		  res.get<double>(varnames_[k + nadi_()] + "_" + other) +=
@@ -377,8 +377,8 @@ History AMModel::d_hist_d_h(const Symmetric & stress,
 			* dslip.get<double>(other) * copysign(1.0, slip);
 			
 		  res.get<double>(varnames_[k + nadi_() + islip_()] + "_" + other) +=
-			(ki1_[k]->value(T) * std::sqrt(macaulay(history.get<double>(varnames_[k + nadi_() + nadi_()])))
-			- ki2_[k]->value(T) * macaulay(history.get<double>(varnames_[k + nadi_() + nadi_()])))
+			(ki1_[k]->value(T) * std::sqrt(macaulay(history.get<double>(varnames_[k + nadi_() + islip_()])))
+			- ki2_[k]->value(T) * macaulay(history.get<double>(varnames_[k + nadi_() + islip_()])))
 			* dslip.get<double>(other) * copysign(1.0, slip);
 		}
 	  }

@@ -44,6 +44,9 @@ class CommonSlipHardening:
         )
 
         nd = nd.reshape(d.shape)
+        
+        # print("nd is:", nd.reshape(25, 25))
+        # print("d is:", d.reshape(25, 25))
 
         self.assertTrue(np.allclose(nd.reshape(d.shape), d, rtol=1.0e-4))
     
@@ -142,7 +145,6 @@ class TestAMModel(unittest.TestCase, CommonSlipHardening):
                 self.H.add_scalar("islip" + str(i))
                 self.H.set_scalar("islip" + str(i), 1.0e6 / (self.uf**2))
 
-        print(np.array(self.H))
         self.M_v = 200.0e3
         self.M = np.ones((12,)) * self.M_v
         self.b = 0.256e-9 * self.uf
