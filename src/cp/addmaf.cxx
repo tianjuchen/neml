@@ -135,7 +135,7 @@ double AMModel::wall_frac(size_t g, size_t i,
   consistency(L);
   
   return (omega_ * mu_[L.flat(g,i)]->value(T) * std::pow(b_, 3))
-	/ (kb_ * T) * 1 / history.get<double>(varnames_[0]);
+	/ (kb_ * T * history.get<double>(varnames_[0]));
 }
 
 
@@ -174,7 +174,7 @@ double AMModel::dfdd(size_t g, size_t i,
   consistency(L);
 
   return -mu_[L.flat(g,i)]->value(T) * omega_ * std::pow(b_, 3)
-	/ (kb_ * T) / std::pow(history.get<double>(varnames_[0]), 2);
+	/ (kb_ * T * std::pow(history.get<double>(varnames_[0]), 2));
 }
 
 

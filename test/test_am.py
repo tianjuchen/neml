@@ -29,7 +29,6 @@ class CommonSlipHardening:
 
         self.assertTrue(np.allclose(nd.reshape(d.shape), d))
 
-    
     def test_d_hist_d_hist(self):
         d = np.array(
             self.model.d_hist_d_h(
@@ -44,13 +43,12 @@ class CommonSlipHardening:
         )
 
         nd = nd.reshape(d.shape)
-        
-        print("nd is:", nd.reshape(25, 25))
-        print("d is:", d.reshape(25, 25))
+
+        # print("nd is:", nd.reshape(25, 25))
+        # print("d is:", d.reshape(25, 25))
 
         self.assertTrue(np.allclose(nd.reshape(d.shape), d, rtol=1.0e-4))
-    
-    """
+
     def test_d_hist_to_tau_d_hist(self):
         iq = 0
         for g in range(self.L.ngroup):
@@ -63,12 +61,11 @@ class CommonSlipHardening:
                 )
                 d = self.model.d_hist_to_tau(g, i, self.H, self.L, self.T, self.fixed)
 
-                print("neml sf is:", self.model.fmod(self.H))
+                # print("neml sf is:", self.model.fmod(self.H))
                 # print("dsfdd is:", self.model.dfsigdd(self.H))
                 # print("f is:", self.wfrac(iq, g, i))
                 # print("dsfdd act is:", self.dsfdd())
-                print("sf is: ", self.fmod())
-
+                # print("sf is: ", self.fmod())
 
                 d_act = np.zeros((25,))
 
@@ -78,7 +75,7 @@ class CommonSlipHardening:
                     * self.b
                     * np.sqrt(np.array(self.H)[iq + 12 + 1])
                     * (
-                        - self.dfdd(iq, g, i)
+                        -self.dfdd(iq, g, i)
                         + self.dfdd(iq, g, i) * self.fmod()
                         + self.wfrac(iq, g, i) * self.dsfdd()
                     )
@@ -113,11 +110,11 @@ class CommonSlipHardening:
                     * (1 - self.wfrac(iq, g, i) * (1 - self.fmod()))
                 )
 
-                print("nd is: ", np.array(nd))
-                print("d is: ", np.array(d))
+                # print("nd is: ", np.array(nd))
+                # print("d is: ", np.array(d))
                 # print("d_act is: ", d_act)
                 self.assertTrue(np.allclose(np.array(nd), np.array(d)))
-    """
+
 
 class TestAMModel(unittest.TestCase, CommonSlipHardening):
     def setUp(self):
@@ -143,7 +140,7 @@ class TestAMModel(unittest.TestCase, CommonSlipHardening):
                 self.H.set_scalar("wslip" + str(i), 5.0e12 / (self.uf**2))
             else:
                 self.H.add_scalar("islip" + str(i))
-                self.H.set_scalar("islip" + str(i), 1.0e6 / (self.uf**2))
+                self.H.set_scalar("islip" + str(i), 1.0e8 / (self.uf**2))
 
         self.M_v = 200.0e3
         self.M = np.ones((12,)) * self.M_v
@@ -163,7 +160,7 @@ class TestAMModel(unittest.TestCase, CommonSlipHardening):
         self.ki1 = np.ones((12,)) * self.ki1_v
         self.ki2 = np.ones((12,)) * self.ki2_v
 
-        self.c = 0.0
+        self.c = 100.0
         self.dc = 1.0e-7 * self.uf
 
         self.alphai = 0.25
