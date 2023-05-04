@@ -26,6 +26,7 @@ AMModel::AMModel(ParameterSet & params):
 	Q_(params.get_parameter<double>("Q")),
 	Tr_(params.get_parameter<double>("Tr")),
 	ftr_(params.get_parameter<double>("ftr")),
+	initsigma_(params.get_parameter<double>("initsigma")),
 	varprefix_(params.get_parameter<std::string>("varprefix")), 
     wslipprefix_(params.get_parameter<std::string>("wslipprefix")),
 	islipprefix_(params.get_parameter<std::string>("islipprefix"))
@@ -71,20 +72,21 @@ ParameterSet AMModel::parameters()
   pset.add_parameter<std::vector<NEMLObject>>("ki2");
   pset.add_optional_parameter<double>("alpha_w", 0.95);
   pset.add_optional_parameter<double>("alpha_i", 0.25);
-  pset.add_optional_parameter<double>("iniwvalue", 5.0e12);
-  pset.add_optional_parameter<double>("iniivalue", 1.0e6);
-  pset.add_optional_parameter<double>("inibvalue", 5.5e-7);
-  pset.add_optional_parameter<double>("b", 0.256e-9);
-  pset.add_optional_parameter<double>("kb", 1.380649e-23);
+  pset.add_optional_parameter<double>("iniwvalue", 5.0e-6);
+  pset.add_optional_parameter<double>("iniivalue", 1.0e-8);
+  pset.add_optional_parameter<double>("inibvalue", 5.5e2);
+  pset.add_optional_parameter<double>("b", 0.256);
+  pset.add_optional_parameter<double>("kb", 13806.49);
   pset.add_optional_parameter<double>("R", 8.3145);
   pset.add_optional_parameter<double>("k0", 1.0e-6);
-  pset.add_optional_parameter<double>("dc", 1.0e-5);
-  pset.add_optional_parameter<double>("c", 1000.0);
+  pset.add_optional_parameter<double>("dc", 1.0e4);
+  pset.add_optional_parameter<double>("c", 10.0);
   pset.add_optional_parameter<double>("lamda", 1.0);
-  pset.add_optional_parameter<double>("omega", 1.687e-4);
+  pset.add_optional_parameter<double>("omega", 421750.0);
   pset.add_optional_parameter<double>("Q", 1.0e4);
   pset.add_optional_parameter<double>("Tr", 298.0);
   pset.add_optional_parameter<double>("ftr", 0.1);
+  pset.add_optional_parameter<double>("initsigma", 50.0);
   pset.add_optional_parameter<std::string>("varprefix", 
                                            std::string("wall"));
   pset.add_optional_parameter<std::string>("wslipprefix", 
@@ -162,7 +164,8 @@ double AMModel::hist_to_tau(size_t g, size_t i,
 	* (1 - wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history)))
 	+ alpha_w_ * mu_[L.flat(g,i)]->value(T) * b_
 	* std::sqrt(macaulay(history.get<double>(varnames_[L.flat(g,i) + nadi_()])))
-	* wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history));
+	* wall_frac(g, i, history, L, T, fixed) * (1 - fmod(history))
+	+ initsigma_;
 }  
 
 

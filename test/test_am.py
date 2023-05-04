@@ -14,6 +14,7 @@ import numpy.random as ra
 
 
 class CommonSlipHardening:
+    
     def test_d_hist_d_stress(self):
         d = np.array(
             self.model.d_hist_d_s(
@@ -28,7 +29,7 @@ class CommonSlipHardening:
         )
 
         self.assertTrue(np.allclose(nd.reshape(d.shape), d))
-
+    
     def test_d_hist_d_hist(self):
         d = np.array(
             self.model.d_hist_d_h(
@@ -47,8 +48,8 @@ class CommonSlipHardening:
         # print("nd is:", nd.reshape(25, 25))
         # print("d is:", d.reshape(25, 25))
 
-        self.assertTrue(np.allclose(nd.reshape(d.shape), d, rtol=1.0e-4))
-
+        self.assertTrue(np.allclose(nd.reshape(d.shape), d))
+    
     def test_d_hist_to_tau_d_hist(self):
         iq = 0
         for g in range(self.L.ngroup):
@@ -61,60 +62,11 @@ class CommonSlipHardening:
                 )
                 d = self.model.d_hist_to_tau(g, i, self.H, self.L, self.T, self.fixed)
 
-                # print("neml sf is:", self.model.fmod(self.H))
-                # print("dsfdd is:", self.model.dfsigdd(self.H))
-                # print("f is:", self.wfrac(iq, g, i))
-                # print("dsfdd act is:", self.dsfdd())
-                # print("sf is: ", self.fmod())
-
-                d_act = np.zeros((25,))
-
-                d_act[0] = (
-                    self.alphai
-                    * self.M[iq]
-                    * self.b
-                    * np.sqrt(np.array(self.H)[iq + 12 + 1])
-                    * (
-                        -self.dfdd(iq, g, i)
-                        + self.dfdd(iq, g, i) * self.fmod()
-                        + self.wfrac(iq, g, i) * self.dsfdd()
-                    )
-                ) + self.alphaw * self.M[iq] * self.b * np.sqrt(
-                    np.array(self.H)[iq + 1]
-                ) * (
-                    self.dfdd(iq, g, i)
-                    - (
-                        self.dfdd(iq, g, i) * self.fmod()
-                        + self.wfrac(iq, g, i) * self.dsfdd()
-                    )
-                )
-
-                d_act[iq + 1] = (
-                    0.5
-                    * self.alphaw
-                    * self.M[iq]
-                    * self.b
-                    * 1
-                    / np.sqrt(np.array(self.H)[iq + 1])
-                    * self.wfrac(iq, g, i)
-                    * (1 - self.fmod())
-                )
-
-                d_act[iq + 12 + 1] = (
-                    0.5
-                    * self.alphai
-                    * self.M[iq]
-                    * self.b
-                    * 1
-                    / np.sqrt(np.array(self.H)[iq + 12 + 1])
-                    * (1 - self.wfrac(iq, g, i) * (1 - self.fmod()))
-                )
 
                 # print("nd is: ", np.array(nd))
                 # print("d is: ", np.array(d))
-                # print("d_act is: ", d_act)
                 self.assertTrue(np.allclose(np.array(nd), np.array(d)))
-
+    
 
 class TestAMModel(unittest.TestCase, CommonSlipHardening):
     def setUp(self):
@@ -173,6 +125,7 @@ class TestAMModel(unittest.TestCase, CommonSlipHardening):
         self.lamda = 1.0
         self.Tr = 298.0
         self.ftr = 0.1
+        self.inisig = 50.0
 
         self.model = addmaf.AMModel(
             self.M,
@@ -257,7 +210,7 @@ class TestAMModel(unittest.TestCase, CommonSlipHardening):
                     iq, g, i
                 ) * (
                     1 - self.fmod()
-                )
+                ) + self.inisig
                 iq += 1
         check[13:] = check[1:13]
         check[0] = check[-1]

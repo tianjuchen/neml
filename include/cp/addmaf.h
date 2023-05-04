@@ -98,7 +98,7 @@ class NEML_EXPORT AMModel: public SlipHardening
   std::vector<std::shared_ptr<Interpolate>> mu_, kw1_, kw2_, ki1_, ki2_;
   double alpha_w_, alpha_i_, iniwvalue_, iniivalue_, inibvalue_;
   double b_, kb_, R_, k0_, dc_, c_, lambda_, omega_, Q_;
-  double Tr_, ftr_;
+  double Tr_, ftr_, initsigma_;
   std::string varprefix_, wslipprefix_, islipprefix_;
   std::vector<std::string> varnames_;
 };
