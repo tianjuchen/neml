@@ -61,7 +61,7 @@ if __name__ == "__main__":
     strengthmodel = addmaf.AMModel(M, kw1, kw2, ki1, ki2, ftr=ftr, initsigma=75.0)
 
     g0 = 1.0
-    n = 3.0
+    n = 20.0
 
     N = 100
 
