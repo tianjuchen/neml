@@ -26,6 +26,7 @@ AMModel::AMModel(ParameterSet & params):
 	Q_(params.get_parameter<double>("Q")),
 	Tr_(params.get_parameter<double>("Tr")),
 	ftr_(params.get_parameter<double>("ftr")),
+	fb_(params.get_parameter<double>("fb")),
 	initsigma_(params.get_parameter<double>("initsigma")),
 	varprefix_(params.get_parameter<std::string>("varprefix")), 
     wslipprefix_(params.get_parameter<std::string>("wslipprefix")),
@@ -86,6 +87,7 @@ ParameterSet AMModel::parameters()
   pset.add_optional_parameter<double>("Q", 1.0e4);
   pset.add_optional_parameter<double>("Tr", 298.0);
   pset.add_optional_parameter<double>("ftr", 0.1);
+  pset.add_optional_parameter<double>("fb", -1.219);
   pset.add_optional_parameter<double>("initsigma", 50.0);
   pset.add_optional_parameter<std::string>("varprefix", 
                                            std::string("wall"));
@@ -137,7 +139,8 @@ double AMModel::wall_frac(size_t g, size_t i,
   consistency(L);
   
   return (omega_ * mu_[L.flat(g,i)]->value(T) * std::pow(b_, 3))
-	/ (kb_ * T * history.get<double>(varnames_[0]));
+	/ (kb_ * T * history.get<double>(varnames_[0]))
+	+ fb_;
 }
 
 

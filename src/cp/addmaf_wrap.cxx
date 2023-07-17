@@ -13,7 +13,7 @@ PYBIND11_MODULE(addmaf, m) {
   py::module::import("neml.cp.slipharden");
   py::module::import("neml.cp.sliprules");
 
-  m.doc() = "Objects for the Hu & Cocks 316H model";
+  m.doc() = "Objects for the Dislocation density based AM 316SS model";
 
   py::class_<AMModel, HistoryNEMLObject,
       std::shared_ptr<AMModel>>(m,
