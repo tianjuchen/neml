@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 import scipy.optimize as opt
 import pandas as pd
-
+from scipy.optimize import curve_fit
 
 def interp(x, y, xnew):
     return interpolate.interp1d(x, y)(xnew)
@@ -36,7 +36,8 @@ def amodel(kw1_v, kw2_v, ki1_v, ki2_v, k0, Qv, ftr, T=650.0 + 273.0):
     # sys.exit("stop")
 
     sdir = np.array([1, 0, 0, 0, 0, 0])
-    erate = 0.25 / 360000  # 8.33e-5  # 1.0e-4
+    hours = 500
+    erate = 0.25 / (3600 * hours)  # 8.33e-5  # 1.0e-4
     steps = 500
     emax = 0.25  # np.log(1 + 0.5)  # 0.25
     E = 200.0e3
@@ -150,8 +151,9 @@ def hist(smodel, lattice, res):
 
 
 def agingres(new_x, uf=1.0e9):
-    x_exp = np.array([0, 5 * 3600, 25 * 3600, 100 * 3600])
-    y_exp = np.array([7.34e-7, 8.14e-7, 7.7e-7, 9.25e-7]) * uf
+    x_exp = np.array([0, 5 * 3600, 25 * 3600, 100 * 3600, 501 * 3600])
+    #y_exp = np.array([7.34e-7, 8.14e-7, 7.7e-7, 9.25e-7]) * uf
+    y_exp = np.array([7.34e-7, 7.75e-7, 6.22e-7, 6.30e-7, 8.49e-7]) * uf
     new_y = interp(x_exp, y_exp, new_x)
     return new_x, new_y
 
@@ -165,6 +167,14 @@ def calcomega(T):
     nu = 0.3
     mu = E / (2 * (1 + nu))
     return f0 * kb * T * d0 / (mu * b**3.0)
+
+def vf(d, omega, T=650.0+273.0):
+    E = 200.0e3
+    nu = 0.3
+    mu = E / (2 * (1 + nu)) 
+    b = 0.256
+    kb = 13806.49
+    return mu * omega * b**3 / (kb * T * d)
 
 
 if __name__ == "__main__":
@@ -253,3 +263,25 @@ if __name__ == "__main__":
         index=[0],
     )
     data.to_csv("optim_params.csv")
+
+
+    np.savetxt("time-history.txt", np.array(final_res["time"])[1:])
+    np.savetxt("wall-size-pred.txt", np.array(fsim)[1:, 0])
+    np.savetxt("wall-size-true.txt", np.array(fobs)[1:])
+
+    xdata = np.array([0, 5 * 3600, 25 * 3600, 100 * 3600, 501 * 3600])
+    mvf = np.array([67.0, 42.0, 31.0, 24.0, 15.0, 10.9])
+
+
+    popt, pcov = curve_fit(vf, np.array(fsim)[1:, 0], mvf)
+    print("volume fraction param is:", popt)
+    plt.plot(np.array(final_res["time"])[1:], vf(np.array(fsim)[1:, 0], *popt), 'r-', label='fit: w=%5.3f' % popt)
+    plt.plot(xdata, mvf, 'b-', label='data')
+    plt.xlabel("Time")
+    plt.ylabel("Wall fraction")
+    plt.legend()
+    plt.savefig("vf.pdf")
+    plt.show()
+    plt.close()
+
+
