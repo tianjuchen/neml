@@ -231,10 +231,6 @@ History AMModel::hist(const Symmetric & stress,
 
   History res = blank_hist();
   
-  double ddot = k0_ * std::exp(-Q_ /( R_ * T))
-	* history.get<double>(varnames_[0])
-	* std::exp(-history.get<double>(varnames_[0])/dc_);
-
   for (size_t g = 0; g < L.ngroup(); g++) {
     for (size_t i = 0; i < L.nslip(g); i++) {
       size_t k = L.flat(g,i);
