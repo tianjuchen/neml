@@ -25,21 +25,28 @@ from scipy import interpolate
 import scipy.optimize as opt
 import pandas as pd
 from scipy.optimize import curve_fit
+import glob, os
+
 
 def interp(x, y, xnew):
     return interpolate.interp1d(x, y)(xnew)
 
 
-def amodel(kw1_v, kw2_v, ki1_v, ki2_v, k0, Qv, ftr, T=650.0 + 273.0):
+def load_file(path, targ_name="processed-ss316-print"):
+    fnames = glob.glob(path + "*.csv")
+    for f in fnames:
+        fname = os.path.basename(f).split(".csv")[0]
+        if fname == targ_name:
+            df = pd.read_csv(f)
+            return df
 
-    # print(kw1_v, kw2_v, ki1_v, ki2_v, k0, Qv, ftr)
-    # sys.exit("stop")
 
+def amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v, T=650.0 + 273.0):
     sdir = np.array([1, 0, 0, 0, 0, 0])
     hours = 500
-    erate = 0.25 / (3600 * hours)  # 8.33e-5  # 1.0e-4
     steps = 500
-    emax = 0.25  # np.log(1 + 0.5)  # 0.25
+    emax = 0.03  # np.log(1 + 0.5)  # 0.25
+    erate = emax / 8.33e-6  # (3600 * hours)  # 8.33e-5  # 1.0e-4
     E = 200.0e3
     nu = 0.3
     mu = E / (2 * (1 + nu))
@@ -56,19 +63,20 @@ def amodel(kw1_v, kw2_v, ki1_v, ki2_v, k0, Qv, ftr, T=650.0 + 273.0):
         kw2,
         ki1,
         ki2,
-        k0=10**(k0),
-        #Q=Qv,
-        ftr=ftr,
-        initsigma=75.0,
+        k0=10 ** (-6.9582),
+        Q=113848.822,
+        ftr=0.00539,
+        initsigma=inis,#15.0 + 89.1 + 96.6 + 12.5,
         omega=588930.52,
         inibvalue=7.34e2,
+        fb=0.0,
     )
 
     g0 = 1.0
     n = 20.0
 
-    N = 10
-    nthreads = 20
+    N = 40
+    nthreads = 10
 
     slipmodel = sliprules.PowerLawSlipRule(strengthmodel, g0, n)
     imodel = inelasticity.AsaroInelasticity(slipmodel)
@@ -85,26 +93,26 @@ def amodel(kw1_v, kw2_v, ki1_v, ki2_v, k0, Qv, ftr, T=650.0 + 273.0):
     smodel = singlecrystal.SingleCrystalModel(
         kmodel,
         lattice,
-        update_rotation=True,
-        verbose=False,
-        linesearch=True,
-        initial_rotation=Q,
-        miter=100,
-        max_divide=10,
+        #update_rotation=True,
+        verbose=True,
+        #linesearch=True,
+        #initial_rotation=Q,
+        #miter=100,
+        #max_divide=10,
     )
 
     orientations = rotations.random_orientations(N)
-    dt = emax / erate / steps
+    #dt = emax / erate / steps
     pmodel = polycrystal.TaylorModel(smodel, orientations, nthreads=nthreads)
     res = drivers.uniaxial_test(
-        smodel,
+        pmodel,
         erate,
         emax=emax,
         nsteps=steps,
-        sdir=sdir,
+        #sdir=sdir,
         T=T,
-        miter=100,
-        full_results=True,
+        #miter=100,
+        #full_results=False,
     )
     return smodel, lattice, res
 
@@ -152,10 +160,25 @@ def hist(smodel, lattice, res):
 
 def agingres(new_x, uf=1.0e9):
     x_exp = np.array([0, 5 * 3600, 25 * 3600, 100 * 3600, 501 * 3600])
-    #y_exp = np.array([7.34e-7, 8.14e-7, 7.7e-7, 9.25e-7]) * uf
+    # y_exp = np.array([7.34e-7, 8.14e-7, 7.7e-7, 9.25e-7]) * uf
     y_exp = np.array([7.34e-7, 7.75e-7, 6.22e-7, 6.30e-7, 8.49e-7]) * uf
     new_y = interp(x_exp, y_exp, new_x)
     return new_x, new_y
+
+
+def ssres(new_strain, file, origin=False):
+    path = "/home/tianju.chen/neml/examples/cp/"
+    df = load_file(path, targ_name=file)
+    strain = np.array(df["strain"])
+    stress = np.array(df["stress"])
+    new_strain = np.array(new_strain)
+    new_strain[new_strain < 0] = 0.0
+    new_stress = interp(strain, stress, new_strain)
+    
+    if origin:
+        return strain, stress
+    else:
+        return df, new_strain, new_stress
 
 
 def calcomega(T):
@@ -168,120 +191,44 @@ def calcomega(T):
     mu = E / (2 * (1 + nu))
     return f0 * kb * T * d0 / (mu * b**3.0)
 
-def vf(d, omega, T=650.0+273.0):
+
+def vf(d, omega, T=650.0 + 273.0):
     E = 200.0e3
     nu = 0.3
-    mu = E / (2 * (1 + nu)) 
+    mu = E / (2 * (1 + nu))
     b = 0.256
     kb = 13806.49
     return mu * omega * b**3 / (kb * T * d)
 
 
 if __name__ == "__main__":
+    nfile = "processed-ss316-print"
 
-    # omega = calcomega(300.0)
-    # print(omega)
-    # sys.exit("stop")
+    inis, kw1_v, kw2_v, ki1_v, ki2_v = 162.9771, 1.5, 10, 0.15, 10
+    
+    _, _, res = amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v)
 
-    kw1_range = [0.8, 1.5]
-    kw2_range = [10.0, 100.0]
-    ki1_range = [0.08, 0.15]
-    ki2_range = [10.0, 100.0]
-    k0_range = [-7, -5]
-    Qv_range = [1.0e2, 1.0e6]
-    ftr_range = [0.0, 0.5]
+    exp_strain, exp_stress = ssres(res["strain"], nfile, origin=True)
 
-    p0 = [
-        ra.uniform(*kw1_range),
-        ra.uniform(*kw2_range),
-        ra.uniform(*ki1_range),
-        ra.uniform(*ki2_range),
-        ra.uniform(*k0_range),
-        ra.uniform(*Qv_range),
-        ra.uniform(*ftr_range),
-    ]
+    fs = 23
 
-    def R(params):
-        smodel, lattice, res = amodel(*params)
-        _, obs = agingres(res["time"])
-        sim = hist(smodel, lattice, res)
-        R = la.norm(np.array(sim)[1:, 0] - np.array(obs)[1:])
-        print("Current residual: %e" % R)
-        return R
-
-    flag = False
-    iq = 0
-    while not flag:
-        # res = minimize_parallel(
-        res = opt.minimize(
-            R,
-            p0,
-            bounds=[
-                kw1_range,
-                kw2_range,
-                ki1_range,
-                ki2_range,
-                k0_range,
-                Qv_range,
-                ftr_range,
-            ],
-            method="L-BFGS-B",
-        )
-        print(res.success)
-        if res.success == True:
-            flag = True
-            print(res.success)
-            print(res.x)
-        iq += 1
-        if iq >= 10:
-            raise ValueError("Not able to optimize the initialize")
-
-    fmodel, flattice, final_res = amodel(*res.x)
-    _, fobs = agingres(final_res["time"])
-    fsim = hist(fmodel, flattice, final_res)
-
-    plt.plot(np.array(final_res["time"])[1:], np.array(fobs)[1:], label="Exp")
-    plt.plot(np.array(final_res["time"])[1:], np.array(fsim)[1:, 0], label="Model")
-    plt.xlabel("Time")
-    plt.ylabel("Cellular size (nm)")
+    plt.plot(exp_strain, exp_stress, lw=3, label="Exp")
+    plt.plot(res["strain"], res["stress"], lw=3, label="Model")
+    ax = plt.gca()
+    plt.xlabel("Strain", fontsize=fs)
+    plt.ylabel("Stress (MPa)", fontsize=fs)
     plt.legend()
+    plt.tick_params(axis="both", which="major", labelsize=fs)
+    plt.locator_params(axis="both", nbins=5)
+    for axis in ["top", "bottom", "left", "right"]:
+        ax.spines[axis].set_linewidth(3)
+    ax.tick_params(width=3)
+    
+    plt.tight_layout()
     # plt.grid(True)
-    plt.savefig("optimize_initial.pdf")
+    #plt.savefig("taylor-stress-strain-{}.pdf".format(nfile))
     plt.show()
     plt.close()
 
-    data = pd.DataFrame(
-        {
-            "kw1": res.x[0],
-            "kw2": res.x[1],
-            "ki1": res.x[2],
-            "ki2": res.x[3],
-            "k0": res.x[4],
-            "Q": res.x[5],
-            "ftr": res.x[6],
-        },
-        index=[0],
-    )
-    data.to_csv("optim_params.csv")
-
-
-    np.savetxt("time-history.txt", np.array(final_res["time"])[1:])
-    np.savetxt("wall-size-pred.txt", np.array(fsim)[1:, 0])
-    np.savetxt("wall-size-true.txt", np.array(fobs)[1:])
-
-    xdata = np.array([0, 5 * 3600, 25 * 3600, 100 * 3600, 501 * 3600])
-    mvf = np.array([67.0, 42.0, 31.0, 24.0, 15.0, 10.9])
-
-
-    popt, pcov = curve_fit(vf, np.array(fsim)[1:, 0], mvf)
-    print("volume fraction param is:", popt)
-    plt.plot(np.array(final_res["time"])[1:], vf(np.array(fsim)[1:, 0], *popt), 'r-', label='fit: w=%5.3f' % popt)
-    plt.plot(xdata, mvf, 'b-', label='data')
-    plt.xlabel("Time")
-    plt.ylabel("Wall fraction")
-    plt.legend()
-    plt.savefig("vf.pdf")
-    plt.show()
-    plt.close()
 
 
