@@ -74,20 +74,20 @@ ParameterSet AMModel::parameters()
   pset.add_optional_parameter<double>("alpha_w", 0.95);
   pset.add_optional_parameter<double>("alpha_i", 0.25);
   pset.add_optional_parameter<double>("iniwvalue", 5.0e-6);
-  pset.add_optional_parameter<double>("iniivalue", 1.0e-8);
+  pset.add_optional_parameter<double>("iniivalue", 5.0e-7);
   pset.add_optional_parameter<double>("inibvalue", 5.5e2);
   pset.add_optional_parameter<double>("b", 0.256);
   pset.add_optional_parameter<double>("kb", 13806.49);
   pset.add_optional_parameter<double>("R", 8.3145);
-  pset.add_optional_parameter<double>("k0", 1.0e-6);
+  pset.add_optional_parameter<double>("k0", 1.0e-7);
   pset.add_optional_parameter<double>("dc", 1.0e4);
   pset.add_optional_parameter<double>("c", 10.0);
   pset.add_optional_parameter<double>("lamda", 1.0);
-  pset.add_optional_parameter<double>("omega", 421750.0);
-  pset.add_optional_parameter<double>("Q", 1.0e4);
+  pset.add_optional_parameter<double>("omega", 588930.52);
+  pset.add_optional_parameter<double>("Q", 1.138e5);
   pset.add_optional_parameter<double>("Tr", 298.0);
   pset.add_optional_parameter<double>("ftr", 0.1);
-  pset.add_optional_parameter<double>("fb", -1.219);
+  pset.add_optional_parameter<double>("fb", 0.0);
   pset.add_optional_parameter<double>("initsigma", 50.0);
   pset.add_optional_parameter<std::string>("varprefix", 
                                            std::string("wall"));

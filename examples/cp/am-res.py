@@ -21,7 +21,7 @@ from neml.math import rotations, tensors, nemlmath
 from neml import elasticity, drivers, history, interpolate
 
 import matplotlib.pyplot as plt
-from scipy import interpolate
+from scipy import interpolate as sciinterp
 import scipy.optimize as opt
 import pandas as pd
 from scipy.optimize import curve_fit
@@ -29,7 +29,7 @@ import glob, os
 
 
 def interp(x, y, xnew):
-    return interpolate.interp1d(x, y)(xnew)
+    return sciinterp.interp1d(x, y)(xnew)
 
 
 def load_file(path, targ_name="processed-ss316-print"):
@@ -42,6 +42,9 @@ def load_file(path, targ_name="processed-ss316-print"):
 
 
 def amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v, T=650.0 + 273.0):
+    # temperature levels
+    Ts = np.array([25.0, 650.0]) + 273.0
+
     sdir = np.array([1, 0, 0, 0, 0, 0])
     hours = 500
     steps = 500
@@ -50,12 +53,18 @@ def amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v, T=650.0 + 273.0):
     E = 200.0e3
     nu = 0.3
     mu = E / (2 * (1 + nu))
-    M = np.ones((12,)) * mu
+    mus = interpolate.PiecewiseLinearInterpolate(list(Ts), [mu, mu])
+    M = np.array([mus] * 12)
 
-    kw1 = np.ones((12,)) * kw1_v
-    kw2 = np.ones((12,)) * kw2_v
-    ki1 = np.ones((12,)) * ki1_v
-    ki2 = np.ones((12,)) * ki2_v
+    kw_1 = interpolate.PiecewiseLinearInterpolate(list(Ts), [kw1_v, kw1_v])
+    kw_2 = interpolate.PiecewiseLinearInterpolate(list(Ts), [kw2_v, kw2_v])
+    ki_1 = interpolate.PiecewiseLinearInterpolate(list(Ts), [ki1_v, ki1_v])
+    ki_2 = interpolate.PiecewiseLinearInterpolate(list(Ts), [ki2_v, ki2_v])
+
+    kw1 = np.array([kw_1] * 12)
+    kw2 = np.array([kw_2] * 12)
+    ki1 = np.array([ki_1] * 12)
+    ki2 = np.array([ki_2] * 12)
 
     strengthmodel = addmaf.AMModel(
         M,
@@ -66,7 +75,7 @@ def amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v, T=650.0 + 273.0):
         k0=10 ** (-6.9582),
         Q=113848.822,
         ftr=0.00539,
-        initsigma=inis,#15.0 + 89.1 + 96.6 + 12.5,
+        initsigma=inis,  # 15.0 + 89.1 + 96.6 + 12.5,
         omega=588930.52,
         inibvalue=7.34e2,
         fb=0.0,
@@ -93,26 +102,26 @@ def amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v, T=650.0 + 273.0):
     smodel = singlecrystal.SingleCrystalModel(
         kmodel,
         lattice,
-        #update_rotation=True,
+        update_rotation=True,
         verbose=True,
-        #linesearch=True,
-        #initial_rotation=Q,
-        #miter=100,
-        #max_divide=10,
+        linesearch=True,
+        initial_rotation=Q,
+        miter=100,
+        max_divide=10,
     )
 
     orientations = rotations.random_orientations(N)
-    #dt = emax / erate / steps
+    # dt = emax / erate / steps
     pmodel = polycrystal.TaylorModel(smodel, orientations, nthreads=nthreads)
     res = drivers.uniaxial_test(
         pmodel,
         erate,
         emax=emax,
         nsteps=steps,
-        #sdir=sdir,
+        sdir=sdir,
         T=T,
-        #miter=100,
-        #full_results=False,
+        miter=100,
+        full_results=False,
     )
     return smodel, lattice, res
 
@@ -174,7 +183,7 @@ def ssres(new_strain, file, origin=False):
     new_strain = np.array(new_strain)
     new_strain[new_strain < 0] = 0.0
     new_stress = interp(strain, stress, new_strain)
-    
+
     if origin:
         return strain, stress
     else:
@@ -205,7 +214,7 @@ if __name__ == "__main__":
     nfile = "processed-ss316-print"
 
     inis, kw1_v, kw2_v, ki1_v, ki2_v = 162.9771, 1.5, 10, 0.15, 10
-    
+
     _, _, res = amodel(inis, kw1_v, kw2_v, ki1_v, ki2_v)
 
     exp_strain, exp_stress = ssres(res["strain"], nfile, origin=True)
@@ -223,12 +232,9 @@ if __name__ == "__main__":
     for axis in ["top", "bottom", "left", "right"]:
         ax.spines[axis].set_linewidth(3)
     ax.tick_params(width=3)
-    
+
     plt.tight_layout()
     # plt.grid(True)
-    #plt.savefig("taylor-stress-strain-{}.pdf".format(nfile))
+    # plt.savefig("taylor-stress-strain-{}.pdf".format(nfile))
     plt.show()
     plt.close()
-
-
-
